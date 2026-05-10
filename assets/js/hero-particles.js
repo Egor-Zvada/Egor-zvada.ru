@@ -49,9 +49,9 @@
 
     const qualityPreset = () => {
       const level = M.motionLevel();
-      if (level === 'low') return { particles: 2300, dpr: 1, speed: 0.78 };
-      if (level === 'medium') return { particles: 4400, dpr: 1.35, speed: 0.9 };
-      return { particles: 7600, dpr: 1.75, speed: 1 };
+      if (level === 'low') return { particles: 900, dpr: 1, speed: 0.78 };
+      if (level === 'medium') return { particles: 1600, dpr: 1.35, speed: 0.9 };
+      return { particles: 2600, dpr: 1.75, speed: 1 };
     };
 
     const themeColor = () => M.isLightTheme() ? 0x090909 : 0xf4f4f1;
@@ -73,7 +73,7 @@
         const amplitude = 0.018 + Math.random() * 0.12;
         const flow = 0.42 + Math.random() * 1.65;
         const lane = band * (0.16 + Math.random() * 0.94);
-        const size = 0.95 + Math.random() * 3.2;
+        const size = Math.random() > 0.82 ? 2.6 + Math.random() * 3.8 : 1.4 + Math.random() * 2.6;
         const depth = Math.random();
         points.push({ u: Math.random(), band, lane, family, phase, amplitude, flow, seed, size, depth });
       }
@@ -152,14 +152,39 @@
 
       const pointGeometry = new THREE.BufferGeometry();
       pointGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pointMeta.length * 3), 3));
-      const pointMaterial = new THREE.PointsMaterial({
-        color: themeColor(),
+      pointGeometry.setAttribute('particleSize', new THREE.BufferAttribute(new Float32Array(pointMeta.map((point) => point.size)), 1));
+      pointGeometry.setAttribute('particleAlpha', new THREE.BufferAttribute(new Float32Array(pointMeta.map((point) => 0.38 + point.depth * 0.62)), 1));
+      const pointMaterial = new THREE.ShaderMaterial({
         transparent: true,
-        opacity: M.isLightTheme() ? 0.32 : 0.74,
-        size: width < 760 ? 0.018 : 0.014,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        sizeAttenuation: false,
+        uniforms: {
+          uColor: { value: new THREE.Color(themeColor()) },
+          uBaseSize: { value: width < 760 ? 9 : 7 },
+          uOpacity: { value: M.isLightTheme() ? 0.46 : 0.88 },
+        },
+        vertexShader: `
+          attribute float particleSize;
+          attribute float particleAlpha;
+          varying float vAlpha;
+          void main() {
+            vAlpha = particleAlpha;
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            gl_Position = projectionMatrix * mvPosition;
+            gl_PointSize = particleSize * uBaseSize;
+          }
+        `,
+        fragmentShader: `
+          uniform vec3 uColor;
+          uniform float uOpacity;
+          varying float vAlpha;
+          void main() {
+            vec2 coord = gl_PointCoord - vec2(0.5);
+            float dist = length(coord);
+            float alpha = smoothstep(0.5, 0.05, dist) * uOpacity * vAlpha;
+            gl_FragColor = vec4(uColor, alpha);
+          }
+        `,
       });
       pointMesh = new THREE.Points(pointGeometry, pointMaterial);
       scene.add(pointMesh);
@@ -191,7 +216,8 @@
       const preset = qualityPreset();
       const time = clock.getElapsedTime() * preset.speed;
       const color = themeColor();
-      pointMesh.material.color.setHex(color);
+      pointMesh.material.uniforms.uColor.value.setHex(color);
+      pointMesh.material.uniforms.uOpacity.value = M.isLightTheme() ? 0.46 : 0.88;
       updateGeometry(time);
       renderer.render(scene, camera);
       scrollVelocity *= 0.92;
