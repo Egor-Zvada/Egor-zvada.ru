@@ -37,6 +37,16 @@
     let pointMeta = [];
     let lastScrollY = window.scrollY;
     let scrollVelocity = 0;
+    let cameraVideo = null;
+    let cameraPixels = null;
+    let cameraFrame = 0;
+    let cameraAllowed = false;
+    const cameraSample = {
+      canvas: document.createElement('canvas'),
+      width: 112,
+      height: 72,
+      ctx: null,
+    };
 
     const pointer = {
       x: 0,
@@ -49,9 +59,9 @@
 
     const qualityPreset = () => {
       const level = M.motionLevel();
-      if (level === 'low') return { particles: 900, dpr: 1, speed: 0.78 };
-      if (level === 'medium') return { particles: 1600, dpr: 1.35, speed: 0.9 };
-      return { particles: 2600, dpr: 1.75, speed: 1 };
+      if (level === 'low') return { particles: 1200, dpr: 1, speed: 0.78 };
+      if (level === 'medium') return { particles: 2100, dpr: 1.35, speed: 0.9 };
+      return { particles: 3400, dpr: 1.75, speed: 1 };
     };
 
     const themeColor = () => M.isLightTheme() ? 0x090909 : 0xf4f4f1;
@@ -73,15 +83,89 @@
         const amplitude = 0.018 + Math.random() * 0.12;
         const flow = 0.42 + Math.random() * 1.65;
         const lane = band * (0.16 + Math.random() * 0.94);
-        const size = Math.random() > 0.82 ? 2.6 + Math.random() * 3.8 : 1.4 + Math.random() * 2.6;
+        const size = Math.random() > 0.88 ? 1.75 + Math.random() * 1.35 : 0.75 + Math.random() * 1.2;
         const depth = Math.random();
-        points.push({ u: Math.random(), band, lane, family, phase, amplitude, flow, seed, size, depth });
+        const imageU = Math.random();
+        const imageV = Math.random();
+        points.push({ u: Math.random(), band, lane, family, phase, amplitude, flow, seed, size, depth, imageU, imageV });
       }
 
       return points;
     }
 
+    function updateCameraFrame() {
+      if (!cameraAllowed || !cameraVideo || cameraVideo.readyState < 2) return;
+
+      cameraFrame += 1;
+      if (cameraFrame % 2 !== 0 && cameraPixels) return;
+
+      const ctx = cameraSample.ctx;
+      ctx.save();
+      ctx.clearRect(0, 0, cameraSample.width, cameraSample.height);
+      ctx.translate(cameraSample.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(cameraVideo, 0, 0, cameraSample.width, cameraSample.height);
+      ctx.restore();
+      cameraPixels = ctx.getImageData(0, 0, cameraSample.width, cameraSample.height).data;
+    }
+
+    function cameraBrightness(meta) {
+      if (!cameraPixels) return 0;
+
+      const x = Math.min(cameraSample.width - 1, Math.max(0, Math.floor(meta.imageU * cameraSample.width)));
+      const y = Math.min(cameraSample.height - 1, Math.max(0, Math.floor(meta.imageV * cameraSample.height)));
+      const index = (y * cameraSample.width + x) * 4;
+      const r = cameraPixels[index] || 0;
+      const g = cameraPixels[index + 1] || 0;
+      const b = cameraPixels[index + 2] || 0;
+      const light = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+
+      return M.clamp((light - 0.16) * 1.65, 0, 1);
+    }
+
+    function applyPointer(x, y, time, meta) {
+      let warpedX = x;
+      let warpedY = y;
+
+      if (Math.abs(scrollVelocity) > 0.1) {
+        warpedX += scrollVelocity * 0.0028 * Math.sin(meta.phase + meta.u * Math.PI);
+        warpedY -= scrollVelocity * 0.0012;
+      }
+
+      if (pointer.strength > 0.01) {
+        const dx = warpedX - pointer.x;
+        const dy = warpedY - pointer.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const radius = width < 760 ? 0.44 : 0.72;
+        const force = Math.max(0, 1 - dist / radius);
+        const wake = Math.sin(dist * 24 - time * 4.4 + meta.phase) * force * pointer.strength;
+        warpedX += (dx / dist) * force * force * 0.32 * pointer.strength + wake * 0.055;
+        warpedY += (dy / dist) * force * force * 0.25 * pointer.strength + Math.cos(dist * 18 - time * 3.4) * force * 0.05 * pointer.strength;
+      }
+
+      return { x: warpedX, y: warpedY };
+    }
+
     function sample(meta, time) {
+      const videoLight = cameraAllowed ? cameraBrightness(meta) : 0;
+
+      if (videoLight > 0.02) {
+        const targetX = (meta.imageU - 0.5) * aspect * 2.1;
+        const targetY = (0.5 - meta.imageV) * 1.62;
+        const drift = Math.sin(time * 0.55 + meta.phase) * 0.018 + Math.cos(time * 0.34 + meta.seed) * 0.012;
+        const curl = Math.sin(meta.imageV * 16 + time * 0.35 + meta.phase) * 0.035 * videoLight;
+        const pointered = applyPointer(targetX + curl, targetY + drift, time, meta);
+        const z = (videoLight - 0.5) * 0.16 + (meta.depth - 0.5) * 0.04;
+
+        return {
+          x: pointered.x,
+          y: pointered.y,
+          z,
+          alpha: M.clamp(0.12 + videoLight * 0.88, 0.08, 1),
+          size: meta.size * (0.82 + videoLight * 0.9),
+        };
+      }
+
       const stream = (meta.u + time * 0.035 * meta.flow + meta.phase * 0.011) % 1;
       const u = stream;
       const band = meta.band;
@@ -106,23 +190,15 @@
       warpedX += fold * 0.075;
       warpedY += fold * 0.09;
 
-      if (Math.abs(scrollVelocity) > 0.1) {
-        warpedX += scrollVelocity * 0.0028 * Math.sin(meta.phase + u * Math.PI);
-        warpedY -= scrollVelocity * 0.0012;
-      }
+      const pointered = applyPointer(warpedX, warpedY, time, meta);
 
-      if (pointer.strength > 0.01) {
-        const dx = warpedX - pointer.x;
-        const dy = warpedY - pointer.y;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const radius = width < 760 ? 0.44 : 0.72;
-        const force = Math.max(0, 1 - dist / radius);
-        const wake = Math.sin(dist * 24 - time * 4.4 + meta.phase) * force * pointer.strength;
-        warpedX += (dx / dist) * force * force * 0.32 * pointer.strength + wake * 0.055;
-        warpedY += (dy / dist) * force * force * 0.25 * pointer.strength + Math.cos(dist * 18 - time * 3.4) * force * 0.05 * pointer.strength;
-      }
-
-      return { x: warpedX, y: warpedY, z: fold * 0.14 + (meta.depth - 0.5) * 0.08 };
+      return {
+        x: pointered.x,
+        y: pointered.y,
+        z: fold * 0.14 + (meta.depth - 0.5) * 0.08,
+        alpha: 0.22 + meta.depth * 0.58,
+        size: meta.size,
+      };
     }
 
     function rebuild() {
@@ -153,15 +229,15 @@
       const pointGeometry = new THREE.BufferGeometry();
       pointGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pointMeta.length * 3), 3));
       pointGeometry.setAttribute('particleSize', new THREE.BufferAttribute(new Float32Array(pointMeta.map((point) => point.size)), 1));
-      pointGeometry.setAttribute('particleAlpha', new THREE.BufferAttribute(new Float32Array(pointMeta.map((point) => 0.38 + point.depth * 0.62)), 1));
+      pointGeometry.setAttribute('particleAlpha', new THREE.BufferAttribute(new Float32Array(pointMeta.map((point) => 0.22 + point.depth * 0.58)), 1));
       const pointMaterial = new THREE.ShaderMaterial({
         transparent: true,
-        blending: THREE.AdditiveBlending,
+        blending: THREE.NormalBlending,
         depthWrite: false,
         uniforms: {
           uColor: { value: new THREE.Color(themeColor()) },
-          uBaseSize: { value: width < 760 ? 14 : 11 },
-          uOpacity: { value: M.isLightTheme() ? 0.46 : 0.88 },
+          uBaseSize: { value: width < 760 ? 5.8 : 4.4 },
+          uOpacity: { value: M.isLightTheme() ? 0.42 : 0.82 },
         },
         vertexShader: `
           attribute float particleSize;
@@ -182,7 +258,8 @@
           void main() {
             vec2 coord = gl_PointCoord - vec2(0.5);
             float dist = length(coord);
-            float alpha = smoothstep(0.5, 0.05, dist) * uOpacity * vAlpha;
+            float alpha = (1.0 - smoothstep(0.43, 0.5, dist)) * uOpacity * vAlpha;
+            if (alpha < 0.01) discard;
             gl_FragColor = vec4(uColor, alpha);
           }
         `,
@@ -195,16 +272,23 @@
       pointer.x = M.lerp(pointer.x, pointer.tx, 0.11);
       pointer.y = M.lerp(pointer.y, pointer.ty, 0.11);
       pointer.strength = M.lerp(pointer.strength, pointer.active ? 1 : 0, 0.055);
+      updateCameraFrame();
 
       const pointPositions = pointMesh.geometry.attributes.position.array;
+      const pointSizes = pointMesh.geometry.attributes.particleSize.array;
+      const pointAlphas = pointMesh.geometry.attributes.particleAlpha.array;
       for (let i = 0; i < pointMeta.length; i += 1) {
         const p = sample(pointMeta[i], time);
         const offset = i * 3;
         pointPositions[offset] = p.x;
         pointPositions[offset + 1] = p.y;
         pointPositions[offset + 2] = p.z;
+        pointSizes[i] = p.size;
+        pointAlphas[i] = p.alpha;
       }
       pointMesh.geometry.attributes.position.needsUpdate = true;
+      pointMesh.geometry.attributes.particleSize.needsUpdate = true;
+      pointMesh.geometry.attributes.particleAlpha.needsUpdate = true;
     }
 
     function render() {
@@ -218,7 +302,7 @@
       const time = clock.getElapsedTime() * preset.speed;
       const color = themeColor();
       pointMesh.material.uniforms.uColor.value.setHex(color);
-      pointMesh.material.uniforms.uOpacity.value = M.isLightTheme() ? 0.46 : 0.88;
+      pointMesh.material.uniforms.uOpacity.value = M.isLightTheme() ? 0.42 : 0.82;
       updateGeometry(time);
       renderer.render(scene, camera);
       scrollVelocity *= 0.92;
@@ -260,11 +344,41 @@
 
     rebuild();
     start();
+    startCamera();
 
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && frame) cancelAnimationFrame(frame);
       if (!document.hidden) start();
     });
+
+    async function startCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+
+      cameraSample.canvas.width = cameraSample.width;
+      cameraSample.canvas.height = cameraSample.height;
+      cameraSample.ctx = cameraSample.canvas.getContext('2d', { willReadFrequently: true });
+      if (!cameraSample.ctx) return;
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 420 },
+            facingMode: 'user',
+          },
+        });
+        cameraVideo = document.createElement('video');
+        cameraVideo.muted = true;
+        cameraVideo.autoplay = true;
+        cameraVideo.playsInline = true;
+        cameraVideo.srcObject = stream;
+        await cameraVideo.play();
+        cameraAllowed = true;
+      } catch (error) {
+        cameraAllowed = false;
+      }
+    }
   }
 
   function initCanvasFallback() {
