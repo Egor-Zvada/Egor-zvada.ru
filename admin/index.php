@@ -76,6 +76,10 @@ function is_uploaded_asset(string $path): bool {
   return strpos($path, '/assets/img/uploads/') === 0;
 }
 
+function is_project_placeholder_asset(string $path): bool {
+  return strpos($path, '/assets/img/projects/') === 0;
+}
+
 function delete_uploaded_asset(string $path, string $root): void {
   if (!is_uploaded_asset($path)) {
     return;
@@ -390,6 +394,24 @@ try {
 
       if ($item['title'] === '') {
         throw new RuntimeException('У проекта должно быть название.');
+      }
+
+      $hasUploadedProjectMedia = is_uploaded_asset((string) $item['image']);
+      foreach ($item['gallery'] as $galleryImage) {
+        if (is_uploaded_asset((string) $galleryImage)) {
+          $hasUploadedProjectMedia = true;
+          break;
+        }
+      }
+
+      if ($hasUploadedProjectMedia) {
+        $item['gallery'] = array_values(array_filter($item['gallery'], static function ($path) {
+          return !is_project_placeholder_asset((string) $path);
+        }));
+
+        if (is_project_placeholder_asset((string) $item['image'])) {
+          $item['image'] = $item['gallery'][0] ?? '';
+        }
       }
 
       if ($item['image'] !== '' && !in_array($item['image'], $item['gallery'], true)) {

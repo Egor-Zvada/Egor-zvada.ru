@@ -14,8 +14,9 @@ usort($skills, static function ($a, $b) {
 });
 
 $totalSkills = count($skills);
-$visibleCount = min(6, $totalSkills);
-$hiddenCount = max(0, $totalSkills - 6);
+$compactSkillsLimit = 5;
+$visibleCount = min($compactSkillsLimit, $totalSkills);
+$hiddenCount = max(0, $totalSkills - $compactSkillsLimit);
 ?>
 <section class="section skills" id="skills" data-section="skills">
   <div class="container">
@@ -50,7 +51,7 @@ $hiddenCount = max(0, $totalSkills - 6);
         </button>
 
         <?php foreach ($skills as $index => $skill): ?>
-          <article class="skill-card <?= $index >= 6 ? 'is-hidden' : '' ?>" data-expandable-item>
+          <article class="skill-card <?= $index >= $compactSkillsLimit ? 'is-hidden' : '' ?>" data-expandable-item>
             <div class="skill-card__head">
               <span class="skill-card__index"><?= str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
               <span class="skill-card__category"><?= htmlspecialchars($skill['category'], ENT_QUOTES, 'UTF-8') ?></span>
