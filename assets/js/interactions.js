@@ -3,7 +3,6 @@
   const menuToggle = document.querySelector('[data-menu-toggle]');
   const siteNav = document.querySelector('[data-site-nav]');
   const adminTrigger = document.querySelector('[data-admin-trigger]');
-  const aboutGallery = document.querySelector('[data-about-gallery]');
 
   const setMenuState = (open) => {
     body.classList.toggle('is-menu-open', open);
@@ -41,22 +40,6 @@
         adminClicks = 0;
       }, 2200);
     });
-  }
-
-  if (aboutGallery) {
-    const images = [...aboutGallery.querySelectorAll('[data-about-gallery-image]')];
-    let activeImage = 0;
-
-    const setAboutImage = (index) => {
-      if (!images.length) return;
-      activeImage = (index + images.length) % images.length;
-      images.forEach((image, imageIndex) => {
-        image.classList.toggle('is-active', imageIndex === activeImage);
-      });
-    };
-
-    aboutGallery.querySelector('[data-about-prev]')?.addEventListener('click', () => setAboutImage(activeImage - 1));
-    aboutGallery.querySelector('[data-about-next]')?.addEventListener('click', () => setAboutImage(activeImage + 1));
   }
 
   document.addEventListener('click', (event) => {

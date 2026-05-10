@@ -569,11 +569,11 @@
   text-transform: uppercase;
 }
 
-.about-visual__screen {
+.about-visual__photo-frame {
   position: relative;
   z-index: 1;
-  min-height: 360px;
   margin: 18px 0;
+  aspect-ratio: 16 / 9;
   border: 1px solid var(--color-line-soft);
   background:
     radial-gradient(circle at 56% 18%, color-mix(in oklab, var(--color-text) 16%, transparent), transparent 20rem),
@@ -581,127 +581,67 @@
   overflow: hidden;
 }
 
-.about-visual__photo {
-  position: absolute;
-  inset: 0;
+.about-visual__single-photo {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0;
-  transform: scale(1.035);
-  filter: saturate(.85) brightness(.74) contrast(1.08);
-  transition: opacity var(--transition-slow), transform var(--transition-slow), filter var(--transition-slow);
+  filter: saturate(.92) brightness(.86) contrast(1.06);
 }
 
-.about-visual__photo.is-active {
-  opacity: 1;
-  transform: scale(1);
-  filter: saturate(1) brightness(.92) contrast(1.04);
+.about-visual__photo-placeholder {
+  min-height: 100%;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  padding: 28px;
+  color: var(--color-muted-2);
+  text-align: center;
+  background:
+    linear-gradient(135deg, transparent 0 48%, var(--color-line-soft) 49% 50%, transparent 51%),
+    var(--color-surface);
 }
 
-.about-visual__controls {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  z-index: 4;
-  display: flex;
-  gap: 8px;
+.about-visual__photo-placeholder span,
+.about-visual__photo-placeholder strong {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
-.about-visual__control {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border: 1px solid var(--color-line-strong);
-  background: color-mix(in oklab, var(--color-bg) 78%, transparent);
-  color: var(--color-text);
-  cursor: pointer;
-  font: 16px/1 var(--font-mono);
-  backdrop-filter: blur(14px);
-  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+.about-visual__photo-placeholder strong {
+  color: var(--color-text-soft);
+  font-weight: 400;
+  text-transform: none;
+  overflow-wrap: anywhere;
 }
 
-.about-visual__control:hover {
-  background: var(--color-text);
-  color: var(--color-bg);
-  border-color: var(--color-text);
-  transform: translateY(-2px);
-}
-
-.about-visual__screen::before {
+.about-visual__photo-frame::before {
   content: "";
   position: absolute;
-  left: 12%;
-  right: 12%;
-  bottom: 24%;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.36)),
+    linear-gradient(90deg, rgba(0,0,0,.32), transparent 56%);
+}
+
+.about-visual__photo-frame::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  z-index: 3;
   height: 1px;
   background: var(--color-line-strong);
-  box-shadow: 0 0 36px color-mix(in oklab, var(--color-text) 22%, transparent);
-  transform: perspective(420px) rotateX(62deg) scaleX(1.22);
-  opacity: .65;
+  opacity: .5;
 }
 
-.about-visual__screen::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 20%;
-  width: 54%;
-  aspect-ratio: 1;
-  border: 1px solid var(--color-line);
-  transform: translateX(-50%) rotate(45deg);
-  opacity: .32;
-}
-
-/* Анимированные вертикальные лучи. */
-.about-visual__stage {
-  position: absolute;
-  inset: 34px 16px auto;
-  height: 190px;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: 12px;
-}
-
-.about-visual__stage span {
-  width: 1px;
-  background: linear-gradient(180deg, var(--color-text), transparent);
-  opacity: .24;
-  transform-origin: top;
-  animation: stageBeam 4.8s ease-in-out infinite;
-}
-
-.about-visual__stage span:nth-child(2) { animation-delay: -.9s; opacity: .36; }
-.about-visual__stage span:nth-child(3) { animation-delay: -1.8s; opacity: .48; }
-.about-visual__stage span:nth-child(4) { animation-delay: -2.5s; opacity: .32; }
-.about-visual__stage span:nth-child(5) { animation-delay: -3.4s; opacity: .22; }
-
-/* Нижняя "консоль" в визуальной карточке. */
-.about-visual__console {
-  position: absolute;
-  left: 11%;
-  right: 11%;
-  bottom: 44px;
-  height: 92px;
-  border: 1px solid var(--color-line);
-  background: color-mix(in oklab, var(--color-bg) 72%, transparent);
-  transform: perspective(540px) rotateX(55deg);
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-  padding: 18px;
-}
-
-.about-visual__console i {
-  display: block;
-  border: 1px solid var(--color-line-soft);
-  background: linear-gradient(180deg, var(--color-surface-strong), transparent);
-  opacity: .9;
-}
-
+/*
 .about-visual__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
