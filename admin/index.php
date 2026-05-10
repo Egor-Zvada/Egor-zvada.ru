@@ -287,7 +287,45 @@ try {
         save_items($GLOBALS['projectsFile'], $projects);
       }
       redirect_admin('projects', 'Проект удалён.');
-    } elseif ($action === 'save_settings') {
+    } elseif ($action === 'save_general_settings') {
+      require_login();
+      check_csrf();
+
+      $settings = load_assoc($GLOBALS['settingsFile']);
+      $settings['version'] = trim((string) ($_POST['version'] ?? '')) ?: '0.2-beta';
+      $settings['admin_clicks'] = max(1, (int) ($_POST['admin_clicks'] ?? 10));
+      save_assoc($GLOBALS['settingsFile'], $settings);
+      redirect_admin('settings', 'Общие настройки сохранены.');
+    } elseif ($action === 'save_contacts') {
+      require_login();
+      check_csrf();
+
+      $contacts = [
+        'email' => trim((string) ($_POST['email'] ?? '')),
+        'telegram' => trim((string) ($_POST['telegram'] ?? '')),
+        'telegram_url' => trim((string) ($_POST['telegram_url'] ?? '')),
+        'location' => trim((string) ($_POST['location'] ?? '')),
+        'timezone' => trim((string) ($_POST['timezone'] ?? '')),
+        'site' => trim((string) ($_POST['site'] ?? '')),
+        'qr_label' => trim((string) ($_POST['qr_label'] ?? '')),
+      ];
+      save_assoc($GLOBALS['contactsFile'], $contacts);
+      redirect_admin('settings', 'Контакты сохранены.');
+    } elseif ($action === 'save_about') {
+      require_login();
+      check_csrf();
+
+      $about = [
+        'lead' => trim((string) ($_POST['about_lead'] ?? '')),
+        'paragraphs' => list_from_lines((string) ($_POST['about_paragraphs'] ?? '')),
+        'focus' => trim((string) ($_POST['about_focus'] ?? '')),
+        'visual_top_left' => trim((string) ($_POST['visual_top_left'] ?? '')),
+        'visual_top_right' => trim((string) ($_POST['visual_top_right'] ?? '')),
+        'visual_tags' => list_from_text((string) ($_POST['visual_tags'] ?? '')),
+      ];
+      save_assoc($GLOBALS['aboutFile'], $about);
+      redirect_admin('settings', 'Блок "Обо мне" сохранён.');
+    } elseif ($action === 'save_password') {
       require_login();
       check_csrf();
 
@@ -302,32 +340,6 @@ try {
         }
       }
 
-      $settings = load_assoc($GLOBALS['settingsFile']);
-      $settings['version'] = trim((string) ($_POST['version'] ?? '')) ?: '0.2-beta';
-      $settings['admin_clicks'] = max(1, (int) ($_POST['admin_clicks'] ?? 10));
-      save_assoc($GLOBALS['settingsFile'], $settings);
-
-      $contacts = [
-        'email' => trim((string) ($_POST['email'] ?? '')),
-        'telegram' => trim((string) ($_POST['telegram'] ?? '')),
-        'telegram_url' => trim((string) ($_POST['telegram_url'] ?? '')),
-        'location' => trim((string) ($_POST['location'] ?? '')),
-        'timezone' => trim((string) ($_POST['timezone'] ?? '')),
-        'site' => trim((string) ($_POST['site'] ?? '')),
-        'qr_label' => trim((string) ($_POST['qr_label'] ?? '')),
-      ];
-      save_assoc($GLOBALS['contactsFile'], $contacts);
-
-      $about = [
-        'lead' => trim((string) ($_POST['about_lead'] ?? '')),
-        'paragraphs' => list_from_lines((string) ($_POST['about_paragraphs'] ?? '')),
-        'focus' => trim((string) ($_POST['about_focus'] ?? '')),
-        'visual_top_left' => trim((string) ($_POST['visual_top_left'] ?? '')),
-        'visual_top_right' => trim((string) ($_POST['visual_top_right'] ?? '')),
-        'visual_tags' => list_from_text((string) ($_POST['visual_tags'] ?? '')),
-      ];
-      save_assoc($GLOBALS['aboutFile'], $about);
-
       if ($newPassword !== '' || $newPasswordRepeat !== '') {
         $adminConfig = load_assoc(__DIR__ . '/config.php');
         $adminConfig['username'] = trim((string) ($_POST['admin_username'] ?? $adminConfig['username'] ?? 'admin')) ?: 'admin';
@@ -339,7 +351,7 @@ try {
         save_assoc(__DIR__ . '/config.php', $adminConfig);
       }
 
-      redirect_admin('settings', 'Настройки сохранены.');
+      redirect_admin('settings', 'Доступ к админке сохранён.');
     }
   }
 } catch (Throwable $exception) {
@@ -378,7 +390,6 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
     .grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 18px; align-items: start; }
     .panel { border: 1px solid var(--line); background: var(--panel); padding: 18px; }
     .panel h2 { margin: 0 0 14px; font-size: 22px; letter-spacing: -.025em; }
-    .settings-block { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
     .list { display: grid; gap: 8px; }
     .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); background: #0d0d0d; }
     .row strong { display: block; }
@@ -434,47 +445,61 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
       <?php if ($error): ?><div class="error"><?= h($error) ?></div><?php endif; ?>
 
       <?php if ($tab === 'settings'): ?>
-        <section class="panel">
-          <h2>Настройки сайта</h2>
-          <form method="post">
-            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
-            <input type="hidden" name="action" value="save_settings">
+        <div class="grid">
+          <section class="panel">
+            <h2>Общие</h2>
+            <form method="post">
+              <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+              <input type="hidden" name="action" value="save_general_settings">
+              <label>Версия в футере <input name="version" value="<?= h($settings['version'] ?? '0.2-beta') ?>" required></label>
+              <label>Кликов для скрытого входа <input name="admin_clicks" type="number" min="1" max="50" value="<?= h($settings['admin_clicks'] ?? 10) ?>" required></label>
+              <button class="primary" type="submit">Сохранить общие</button>
+            </form>
+          </section>
 
-            <div class="grid">
-              <div>
-                <h2>Общие</h2>
-                <label>Версия в футере <input name="version" value="<?= h($settings['version'] ?? '0.2-beta') ?>" required></label>
-                <label>Кликов для скрытого входа <input name="admin_clicks" type="number" min="1" max="50" value="<?= h($settings['admin_clicks'] ?? 10) ?>" required></label>
-                <label>Логин админки <input name="admin_username" value="<?= h($config['username'] ?? 'admin') ?>" autocomplete="username" required></label>
-                <label>Новый пароль <input name="new_password" type="password" autocomplete="new-password" placeholder="Оставь пустым, если не менять"></label>
-                <label>Повтор нового пароля <input name="new_password_repeat" type="password" autocomplete="new-password" placeholder="Оставь пустым, если не менять"></label>
-              </div>
+          <section class="panel">
+            <h2>Доступ</h2>
+            <form method="post">
+              <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+              <input type="hidden" name="action" value="save_password">
+              <label>Логин админки <input name="admin_username" value="<?= h($config['username'] ?? 'admin') ?>" autocomplete="username" required></label>
+              <label>Новый пароль <input name="new_password" type="password" autocomplete="new-password" placeholder="Оставь пустым, если не менять"></label>
+              <label>Повтор нового пароля <input name="new_password_repeat" type="password" autocomplete="new-password" placeholder="Оставь пустым, если не менять"></label>
+              <button class="primary" type="submit">Сохранить доступ</button>
+            </form>
+          </section>
 
-              <div>
-                <h2>Контакты</h2>
-                <label>Email <input name="email" type="email" value="<?= h($contacts['email'] ?? '') ?>"></label>
-                <label>Telegram <input name="telegram" value="<?= h($contacts['telegram'] ?? '') ?>"></label>
-                <label>Telegram URL <input name="telegram_url" type="url" value="<?= h($contacts['telegram_url'] ?? '') ?>"></label>
-                <label>Локация <input name="location" value="<?= h($contacts['location'] ?? '') ?>"></label>
-                <label>Часовой пояс <input name="timezone" value="<?= h($contacts['timezone'] ?? '') ?>"></label>
-                <label>Сайт <input name="site" value="<?= h($contacts['site'] ?? '') ?>"></label>
-                <label>QR label <input name="qr_label" value="<?= h($contacts['qr_label'] ?? '') ?>"></label>
-              </div>
-            </div>
+          <section class="panel">
+            <h2>Контакты</h2>
+            <form method="post">
+              <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+              <input type="hidden" name="action" value="save_contacts">
+              <label>Email <input name="email" type="email" value="<?= h($contacts['email'] ?? '') ?>"></label>
+              <label>Telegram <input name="telegram" value="<?= h($contacts['telegram'] ?? '') ?>"></label>
+              <label>Telegram URL <input name="telegram_url" type="url" value="<?= h($contacts['telegram_url'] ?? '') ?>"></label>
+              <label>Локация <input name="location" value="<?= h($contacts['location'] ?? '') ?>"></label>
+              <label>Часовой пояс <input name="timezone" value="<?= h($contacts['timezone'] ?? '') ?>"></label>
+              <label>Сайт <input name="site" value="<?= h($contacts['site'] ?? '') ?>"></label>
+              <label>QR label <input name="qr_label" value="<?= h($contacts['qr_label'] ?? '') ?>"></label>
+              <button class="primary" type="submit">Сохранить контакты</button>
+            </form>
+          </section>
 
-            <div class="settings-block">
-              <h2>Обо мне</h2>
+          <section class="panel">
+            <h2>Обо мне</h2>
+            <form method="post">
+              <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+              <input type="hidden" name="action" value="save_about">
               <label>Короткий лид <textarea name="about_lead"><?= h($about['lead'] ?? '') ?></textarea></label>
               <label>Основной текст, каждый абзац с новой строки <textarea name="about_paragraphs"><?= h(implode("\n", $about['paragraphs'] ?? [])) ?></textarea></label>
               <label>Focus строка <input name="about_focus" value="<?= h($about['focus'] ?? '') ?>"></label>
               <label>Визуальный блок, левый заголовок <input name="visual_top_left" value="<?= h($about['visual_top_left'] ?? '') ?>"></label>
               <label>Визуальный блок, правый заголовок <input name="visual_top_right" value="<?= h($about['visual_top_right'] ?? '') ?>"></label>
               <label>Теги визуального блока <textarea name="visual_tags"><?= h(implode("\n", $about['visual_tags'] ?? [])) ?></textarea></label>
-            </div>
-
-            <button class="primary" type="submit">Сохранить настройки</button>
-          </form>
-        </section>
+              <button class="primary" type="submit">Сохранить "Обо мне"</button>
+            </form>
+          </section>
+        </div>
       <?php elseif ($tab === 'projects'): ?>
         <div class="grid">
           <section class="panel">

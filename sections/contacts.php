@@ -46,7 +46,7 @@
       aria-label="Открыть Telegram"
     >
       <img
-        src="/assets/img/qr/telegram-qr.png"
+        src="/qr.php?<?= htmlspecialchars(substr(sha1($contacts['telegram_url'] ?? ''), 0, 10), ENT_QUOTES, 'UTF-8') ?>"
         alt="QR-код Telegram"
         class="contact-qr__image"
         loading="lazy"
