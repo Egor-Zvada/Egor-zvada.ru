@@ -160,12 +160,13 @@
         depthWrite: false,
         uniforms: {
           uColor: { value: new THREE.Color(themeColor()) },
-          uBaseSize: { value: width < 760 ? 9 : 7 },
+          uBaseSize: { value: width < 760 ? 14 : 11 },
           uOpacity: { value: M.isLightTheme() ? 0.46 : 0.88 },
         },
         vertexShader: `
           attribute float particleSize;
           attribute float particleAlpha;
+          uniform float uBaseSize;
           varying float vAlpha;
           void main() {
             vAlpha = particleAlpha;
