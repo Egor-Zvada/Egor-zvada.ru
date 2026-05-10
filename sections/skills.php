@@ -52,11 +52,24 @@ $hiddenCount = max(0, $totalSkills - $compactSkillsLimit);
 
         <?php foreach ($skills as $index => $skill): ?>
           <article class="skill-card <?= $index >= $compactSkillsLimit ? 'is-hidden' : '' ?>" data-expandable-item>
+            <?php
+              $iconPath = (string) ($skill['icon'] ?? '');
+              $iconClasses = ['skill-card__icon'];
+              if (strpos($iconPath, '/assets/img/uploads/') === 0) {
+                $iconClasses[] = 'skill-card__icon--uploaded';
+              }
+              $invertIcon = array_key_exists('invert_icon', $skill)
+                ? (bool) $skill['invert_icon']
+                : strpos($iconPath, '/assets/img/uploads/') !== 0;
+              if (!$invertIcon) {
+                $iconClasses[] = 'skill-card__icon--no-invert';
+              }
+            ?>
             <div class="skill-card__head">
               <span class="skill-card__index"><?= str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
               <span class="skill-card__category"><?= htmlspecialchars($skill['category'], ENT_QUOTES, 'UTF-8') ?></span>
             </div>
-            <img class="skill-card__icon <?= strpos((string) ($skill['icon'] ?? ''), '/assets/img/uploads/') === 0 ? 'skill-card__icon--uploaded' : '' ?>" src="<?= htmlspecialchars($skill['icon'], ENT_QUOTES, 'UTF-8') ?>" alt="" width="48" height="48">
+            <img class="<?= htmlspecialchars(implode(' ', $iconClasses), ENT_QUOTES, 'UTF-8') ?>" src="<?= htmlspecialchars($iconPath, ENT_QUOTES, 'UTF-8') ?>" alt="" width="48" height="48">
             <div class="skill-card__body">
               <h3><?= htmlspecialchars($skill['title'], ENT_QUOTES, 'UTF-8') ?></h3>
               <p><?= htmlspecialchars($skill['description'], ENT_QUOTES, 'UTF-8') ?></p>

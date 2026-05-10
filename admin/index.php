@@ -310,6 +310,7 @@ try {
         'description' => trim((string) ($_POST['description'] ?? '')),
         'icon' => $icon,
         'default_icon' => $defaultIcon,
+        'invert_icon' => !empty($_POST['invert_icon']),
         'order' => max(1, (int) ($_POST['order'] ?? ($old['order'] ?? count($skills) + 1))),
         'level' => trim((string) ($_POST['level'] ?? '')),
         'category' => trim((string) ($_POST['category'] ?? '')),
@@ -533,6 +534,8 @@ $editSkill = isset($_GET['edit_skill'], $skills[(int) $_GET['edit_skill']]) ? $s
 $editSkillIndex = $editSkill === null ? '' : (string) ((int) $_GET['edit_skill']);
 $editProject = isset($_GET['edit_project'], $projects[(int) $_GET['edit_project']]) ? $projects[(int) $_GET['edit_project']] : null;
 $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_project']);
+$editSkillIcon = (string) ($editSkill['icon'] ?? '');
+$editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($editSkillIcon));
 ?>
 <!doctype html>
 <html lang="ru">
@@ -542,7 +545,9 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
   <meta name="robots" content="noindex, nofollow">
   <title>Админка — egor_zvada</title>
   <style>
-    :root { color-scheme: dark; --bg: #080808; --panel: #111; --line: #303030; --text: #f3f3f3; --muted: #aaa; --soft: #1a1a1a; }
+    :root { color-scheme: dark light; --bg: #080808; --panel: #111; --line: #303030; --text: #f3f3f3; --muted: #aaa; --soft: #1a1a1a; --field: #090909; --row: #0d0d0d; --image-bg: #050505; --success-bg: #102315; --success-line: #315f37; --success-text: #c9ffd0; --error-bg: #2a1010; --error-line: #733; --error-text: #ffd0d0; --danger-line: #5c2b2b; --danger-text: #ffd3d3; }
+    :root[data-theme="light"] { color-scheme: light; --bg: #f5f5f2; --panel: #fff; --line: #d9d9d2; --text: #090909; --muted: #63635f; --soft: #eeeeea; --field: #fff; --row: #fafaf7; --image-bg: #f0f0eb; --success-bg: #e8f5e9; --success-line: #9bc6a1; --success-text: #1d5a2a; --error-bg: #fff0f0; --error-line: #d6a1a1; --error-text: #7a2020; --danger-line: #cf8f8f; --danger-text: #8f2727; }
+    :root[data-theme="dark"] { color-scheme: dark; }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     a { color: inherit; }
@@ -559,25 +564,26 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
     .panel { border: 1px solid var(--line); background: var(--panel); padding: 18px; }
     .panel h2 { margin: 0 0 14px; font-size: 22px; letter-spacing: -.025em; }
     .list { display: grid; gap: 8px; }
-    .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); background: #0d0d0d; }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); background: var(--row); }
     .row strong { display: block; }
     .row span { display: block; color: var(--muted); font-size: 13px; }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .file-list { display: grid; gap: 8px; margin: -4px 0 12px; }
-    .file-list__item { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); background: #0d0d0d; }
-    .file-list__item img { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--line); background: #050505; }
+    .file-list__item { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); background: var(--row); }
+    .file-list__item img { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--line); background: var(--image-bg); }
     .file-list__item code { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
     form { margin: 0; }
     label { display: grid; gap: 6px; margin-bottom: 12px; color: var(--muted); font-size: 13px; }
-    input, textarea, select { width: 100%; border: 1px solid var(--line); background: #090909; color: var(--text); padding: 10px 12px; font: inherit; }
+    input, textarea, select { width: 100%; border: 1px solid var(--line); background: var(--field); color: var(--text); padding: 10px 12px; font: inherit; }
     textarea { min-height: 92px; resize: vertical; }
     input[type="checkbox"] { width: auto; }
     .check { display: flex; align-items: center; gap: 9px; }
-    .message { margin-bottom: 14px; padding: 12px 14px; border: 1px solid #315f37; background: #102315; color: #c9ffd0; }
-    .error { margin-bottom: 14px; padding: 12px 14px; border: 1px solid #733; background: #2a1010; color: #ffd0d0; }
+    .message { margin-bottom: 14px; padding: 12px 14px; border: 1px solid var(--success-line); background: var(--success-bg); color: var(--success-text); }
+    .error { margin-bottom: 14px; padding: 12px 14px; border: 1px solid var(--error-line); background: var(--error-bg); color: var(--error-text); }
     .hint { color: var(--muted); font-size: 13px; margin-top: -4px; }
     .login { max-width: 420px; margin: 14vh auto 0; }
-    .danger { border-color: #5c2b2b; color: #ffd3d3; }
+    .danger { border-color: var(--danger-line); color: var(--danger-text); }
+    .admin-theme-toggle { text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
     @media (max-width: 860px) { .grid, .settings-grid { grid-template-columns: 1fr; } .settings-grid .panel--wide { grid-column: auto; } .top { align-items: flex-start; flex-direction: column; } .row { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -586,6 +592,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
     <?php if (!$loggedIn): ?>
       <section class="panel login">
         <h1 class="brand">egor_zvada / admin</h1>
+        <button class="admin-theme-toggle" type="button" data-admin-theme-toggle aria-label="Переключить тему">theme</button>
         <?php if ($error): ?><div class="error"><?= h($error) ?></div><?php endif; ?>
         <form method="post">
           <input type="hidden" name="action" value="login">
@@ -607,6 +614,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
           <a class="<?= $tab === 'tags' ? 'is-active' : '' ?>" href="/admin/?tab=tags">Теги</a>
           <a class="<?= $tab === 'settings' ? 'is-active' : '' ?>" href="/admin/?tab=settings">Настройки</a>
           <a href="/" target="_blank" rel="noopener">Открыть сайт</a>
+          <button class="admin-theme-toggle" type="button" data-admin-theme-toggle aria-label="Переключить тему">theme</button>
           <form method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
             <input type="hidden" name="action" value="logout">
@@ -812,6 +820,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
                 <label class="check"><input name="delete_icon" type="checkbox" value="1"> Удалить загруженную иконку с сервера и вернуть дефолт</label>
               <?php endif; ?>
               <label>Загрузить иконку/картинку <input name="icon_upload" type="file" accept="image/*,.svg"></label>
+              <label class="check"><input name="invert_icon" type="checkbox" value="1" <?= $editSkillInvertIcon ? 'checked' : '' ?>> Инвертировать иконку под светлую/тёмную тему</label>
               <label>Уровень / подпись <input name="level" value="<?= h($editSkill['level'] ?? '') ?>" placeholder="system admin"></label>
               <label>Категория <input name="category" value="<?= h($editSkill['category'] ?? '') ?>" placeholder="Системы"></label>
               <label>Теги навыка из списка
@@ -829,5 +838,82 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
       <?php endif; ?>
     <?php endif; ?>
   </main>
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const toggles = [...document.querySelectorAll('[data-admin-theme-toggle]')];
+      const storageKey = 'egor-zvada-admin-theme';
+      const modeStorageKey = 'egor-zvada-admin-theme-mode';
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
+
+      const getStoredValue = (key) => {
+        try {
+          return localStorage.getItem(key);
+        } catch (error) {
+          return null;
+        }
+      };
+
+      const setStoredValue = (key, value) => {
+        try {
+          localStorage.setItem(key, value);
+        } catch (error) {
+          // Theme switching should still work when storage is blocked.
+        }
+      };
+
+      const removeStoredValue = (key) => {
+        try {
+          localStorage.removeItem(key);
+        } catch (error) {
+          // Ignore blocked storage.
+        }
+      };
+
+      const getSystemTheme = () => mediaQuery.matches ? 'light' : 'dark';
+
+      const getInitialTheme = () => {
+        const saved = getStoredValue(storageKey);
+        const savedMode = getStoredValue(modeStorageKey);
+        if (savedMode === 'manual' && (saved === 'light' || saved === 'dark')) return saved;
+        return getSystemTheme();
+      };
+
+      const applyTheme = (theme, persist = false) => {
+        root.dataset.theme = theme;
+        root.style.colorScheme = theme;
+        if (persist) {
+          setStoredValue(storageKey, theme);
+          setStoredValue(modeStorageKey, 'manual');
+        }
+
+        const nextTheme = theme === 'light' ? 'dark' : 'light';
+        toggles.forEach((toggle) => {
+          toggle.textContent = nextTheme;
+          toggle.setAttribute('aria-label', nextTheme === 'dark' ? 'Включить тёмную тему' : 'Включить светлую тему');
+        });
+      };
+
+      const syncWithSystemTheme = () => {
+        removeStoredValue(modeStorageKey);
+        applyTheme(getSystemTheme());
+      };
+
+      applyTheme(getInitialTheme());
+
+      toggles.forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+          const nextTheme = root.dataset.theme === 'light' ? 'dark' : 'light';
+          applyTheme(nextTheme, true);
+        });
+      });
+
+      if (typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', syncWithSystemTheme);
+      } else if (typeof mediaQuery.addListener === 'function') {
+        mediaQuery.addListener(syncWithSystemTheme);
+      }
+    })();
+  </script>
 </body>
 </html>
