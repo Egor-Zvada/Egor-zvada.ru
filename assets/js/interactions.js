@@ -2,6 +2,7 @@
   const body = document.body;
   const menuToggle = document.querySelector('[data-menu-toggle]');
   const siteNav = document.querySelector('[data-site-nav]');
+  const adminTrigger = document.querySelector('[data-admin-trigger]');
 
   const setMenuState = (open) => {
     body.classList.toggle('is-menu-open', open);
@@ -20,6 +21,25 @@
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') setMenuState(false);
   });
+
+  if (adminTrigger) {
+    let adminClicks = 0;
+    let resetTimer;
+
+    adminTrigger.addEventListener('click', () => {
+      adminClicks += 1;
+      window.clearTimeout(resetTimer);
+
+      if (adminClicks >= 10) {
+        window.location.href = '/admin/';
+        return;
+      }
+
+      resetTimer = window.setTimeout(() => {
+        adminClicks = 0;
+      }, 2200);
+    });
+  }
 
   document.addEventListener('click', (event) => {
     const expandButton = event.target.closest('[data-expand-toggle]');
@@ -92,4 +112,3 @@
     }, 3200);
   }
 })();
-

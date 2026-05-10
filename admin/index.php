@@ -7,6 +7,7 @@ $root = dirname(__DIR__);
 $config = require __DIR__ . '/config.php';
 $skillsFile = $root . '/data/skills.php';
 $projectsFile = $root . '/data/projects.php';
+$settingsFile = $root . '/data/settings.php';
 $uploadWebDir = '/assets/img/uploads';
 $uploadFsDir = $root . $uploadWebDir;
 
@@ -47,8 +48,21 @@ function load_items(string $file): array {
   return is_array($items) ? array_values($items) : [];
 }
 
+function load_assoc(string $file): array {
+  $items = require $file;
+  return is_array($items) ? $items : [];
+}
+
 function save_items(string $file, array $items): void {
   $export = var_export(array_values($items), true);
+  $php = "<?php\n\nreturn " . $export . ";\n";
+  if (file_put_contents($file, $php, LOCK_EX) === false) {
+    throw new RuntimeException('Не получилось сохранить файл: ' . basename($file));
+  }
+}
+
+function save_assoc(string $file, array $items): void {
+  $export = var_export($items, true);
   $php = "<?php\n\nreturn " . $export . ";\n";
   if (file_put_contents($file, $php, LOCK_EX) === false) {
     throw new RuntimeException('Не получилось сохранить файл: ' . basename($file));
@@ -265,6 +279,14 @@ try {
         save_items($GLOBALS['projectsFile'], $projects);
       }
       redirect_admin('projects', 'Проект удалён.');
+    } elseif ($action === 'save_settings') {
+      require_login();
+      check_csrf();
+
+      $settings = load_assoc($GLOBALS['settingsFile']);
+      $settings['version'] = trim((string) ($_POST['version'] ?? '')) ?: '0.2-beta';
+      save_assoc($GLOBALS['settingsFile'], $settings);
+      redirect_admin('settings', 'Настройки сохранены.');
     }
   }
 } catch (Throwable $exception) {
@@ -274,6 +296,7 @@ try {
 $loggedIn = is_logged_in();
 $skills = $loggedIn ? load_items($skillsFile) : [];
 $projects = $loggedIn ? load_items($projectsFile) : [];
+$settings = $loggedIn ? load_assoc($settingsFile) : [];
 $editSkill = isset($_GET['edit_skill'], $skills[(int) $_GET['edit_skill']]) ? $skills[(int) $_GET['edit_skill']] : null;
 $editSkillIndex = $editSkill === null ? '' : (string) ((int) $_GET['edit_skill']);
 $editProject = isset($_GET['edit_project'], $projects[(int) $_GET['edit_project']]) ? $projects[(int) $_GET['edit_project']] : null;
@@ -341,6 +364,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
         <div class="nav">
           <a class="<?= $tab === 'skills' ? 'is-active' : '' ?>" href="/admin/?tab=skills">Навыки</a>
           <a class="<?= $tab === 'projects' ? 'is-active' : '' ?>" href="/admin/?tab=projects">Портфолио</a>
+          <a class="<?= $tab === 'settings' ? 'is-active' : '' ?>" href="/admin/?tab=settings">Настройки</a>
           <a href="/" target="_blank" rel="noopener">Открыть сайт</a>
           <form method="post">
             <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
@@ -353,7 +377,17 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
       <?php if ($message): ?><div class="message"><?= h($message) ?></div><?php endif; ?>
       <?php if ($error): ?><div class="error"><?= h($error) ?></div><?php endif; ?>
 
-      <?php if ($tab === 'projects'): ?>
+      <?php if ($tab === 'settings'): ?>
+        <section class="panel">
+          <h2>Настройки сайта</h2>
+          <form method="post">
+            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+            <input type="hidden" name="action" value="save_settings">
+            <label>Версия в футере <input name="version" value="<?= h($settings['version'] ?? '0.2-beta') ?>" required></label>
+            <button class="primary" type="submit">Сохранить настройки</button>
+          </form>
+        </section>
+      <?php elseif ($tab === 'projects'): ?>
         <div class="grid">
           <section class="panel">
             <h2>Проекты</h2>

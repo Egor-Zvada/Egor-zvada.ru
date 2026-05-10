@@ -1251,6 +1251,11 @@
 .site-footer__version {
   font-family: var(--font-mono);
   color: var(--color-muted-2);
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: default;
+  font: inherit;
 }
 
 /* Кнопка наверх справа. */

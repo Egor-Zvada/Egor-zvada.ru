@@ -10,7 +10,9 @@
 
     <div class="site-footer__meta">
       <p class="site-footer__copy">© <?= date('Y') ?> Егор Звада. Все права защищены.</p>
-      <p class="site-footer__version">&gt; build: v09-release</p>
+      <button class="site-footer__version" type="button" data-admin-trigger aria-label="Версия сайта">
+        &gt; build: <?= htmlspecialchars($pageVersion ?? '0.2-beta', ENT_QUOTES, 'UTF-8') ?>
+      </button>
     </div>
 
     <button class="button button--ghost site-footer__top" type="button" data-scroll-top>
