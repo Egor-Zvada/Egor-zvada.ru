@@ -2,6 +2,7 @@
   const canvas = document.querySelector('[data-hero-particles]');
   if (!canvas || !window.EZMotion) return;
 
+  const hero = canvas.closest('.hero') || canvas;
   const M = window.EZMotion;
   let ctx;
   let width = 1;
@@ -113,13 +114,18 @@
         const dx = x - pointer.x;
         const dy = y - pointer.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const radius = width < 760 ? 150 : 250;
+        const radius = width < 760 ? 190 : 360;
         if (dist < radius) {
           const force = Math.pow((radius - dist) / radius, 2) * pointer.strength;
-          const push = 118 + Math.abs(scrollVelocity) * 0.8;
+          const push = 150 + Math.abs(scrollVelocity) * 0.9;
           x += (dx / dist) * force * push;
-          y += (dy / dist) * force * 82;
+          y += (dy / dist) * force * 105;
         }
+
+        const wake = Math.sin(dist * 0.018 - time * 2.1 + point.seed * 0.01) * pointer.strength;
+        const falloff = Math.max(0, 1 - dist / Math.max(width, height));
+        x += wake * falloff * focus * 18;
+        y += Math.cos(dist * 0.014 - time * 1.7) * falloff * focus * 14 * pointer.strength;
       }
     }
 
@@ -227,6 +233,21 @@
     pointer.active = true;
   }
 
+  function setPointerFromWindow(event) {
+    const heroRect = hero.getBoundingClientRect();
+    const isInsideHero = event.clientX >= heroRect.left
+      && event.clientX <= heroRect.right
+      && event.clientY >= heroRect.top
+      && event.clientY <= heroRect.bottom;
+
+    if (!isInsideHero) {
+      pointer.active = false;
+      return;
+    }
+
+    setPointer(event);
+  }
+
   function start() {
     if (frame) cancelAnimationFrame(frame);
     frame = requestAnimationFrame(draw);
@@ -235,9 +256,10 @@
   M.createVisibilityController(canvas, (isVisible) => { visible = isVisible; });
   window.addEventListener('resize', resize, { passive: true });
   window.addEventListener('scroll', updateScrollVelocity, { passive: true });
+  window.addEventListener('pointermove', setPointerFromWindow, { passive: true });
   canvas.addEventListener('mousemove', setPointer, { passive: true });
   canvas.addEventListener('mouseenter', setPointer, { passive: true });
-  canvas.addEventListener('mouseleave', () => { pointer.active = false; }, { passive: true });
+  hero.addEventListener('pointerleave', () => { pointer.active = false; }, { passive: true });
 
   resize();
   start();
