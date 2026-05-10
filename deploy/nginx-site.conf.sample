@@ -1,0 +1,27 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name egor-zvada.ru www.egor-zvada.ru;
+
+    root /var/www/egor-zvada.ru;
+    index index.php index.html;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+    }
+
+    location ~* \.(?:css|js|svg|jpg|jpeg|png|webp|mp4|webm)$ {
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000";
+        try_files $uri =404;
+    }
+}

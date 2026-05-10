@@ -1,0 +1,1686 @@
+/* =========================================================
+   sections.css — layout and section-specific styling
+   Что тут лежит:
+   - первый экран hero
+   - блок about
+   - блок skills
+   - блок projects
+   - блок tavrida
+   - блок contacts
+   - footer
+   - локальные responsive-правки для этих секций
+   ========================================================= */
+
+
+/* =========================================================
+   SKIP LINK
+   Кнопка "Перейти к содержимому".
+   Нужна для доступности: появляется только при фокусе с клавиатуры.
+   Если она визуально мешает — править тут.
+   ========================================================= */
+
+.skip-link {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 9999;
+  transform: translateY(-180%);
+  opacity: 0;
+  pointer-events: none;
+  padding: 10px 14px;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  text-decoration: none;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+
+/* =========================================================
+   HERO / FIRST SCREEN
+   Первый экран сайта.
+   Тут правятся:
+   - высота первого экрана
+   - размер заголовка
+   - фоновые линии/canvas
+   - отступ текста от правой анимации
+   ========================================================= */
+
+.hero {
+  min-height: 100svh;
+  display: grid;
+  align-items: center;
+  padding-top: calc(var(--header-height) + 80px);
+  border-top: 0;
+  overflow: hidden;
+}
+
+/* Градиентный фон hero. Если фон слишком светлый/грязный — править opacity/цвета тут. */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, var(--color-bg) 0%, color-mix(in oklab, var(--color-bg) 82%, transparent) 34%, transparent 58%, var(--color-bg) 100%),
+    radial-gradient(circle at 72% 42%, var(--color-glow-soft), transparent 38rem),
+    radial-gradient(circle at 18% 68%, var(--color-glow-faint), transparent 34rem);
+}
+
+/* Тонкая линия внизу первого экрана. */
+.hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-line-strong), transparent);
+  opacity: .7;
+}
+
+/* Контейнер фоновой canvas-анимации. */
+.hero__visual {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  opacity: .92;
+  mask-image: linear-gradient(90deg, transparent 0%, black 26%, black 92%, transparent 100%);
+}
+
+/* Сам canvas с частицами/линиями. */
+.hero__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Декоративные горизонтальные линии справа в hero. */
+.hero__frame {
+  position: absolute;
+  right: max(24px, calc((100vw - var(--container)) / 2));
+  width: min(42vw, 620px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-line), transparent);
+  opacity: .52;
+}
+
+.hero__frame--top {
+  top: 22vh;
+}
+
+.hero__frame--bottom {
+  bottom: 18vh;
+}
+
+/* Контент hero.
+   padding-right отвечает за то, сколько места оставляем справа под анимацию.
+   Если строки заголовка ломаются — уменьшай padding-right.
+*/
+.hero__inner {
+  position: relative;
+  z-index: 1;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-right: min(22vw, 300px);
+}
+
+/* Технические строки сверху и снизу hero. */
+.hero__meta,
+.hero__status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--color-muted-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .035em;
+}
+
+.hero__meta {
+  margin-bottom: clamp(28px, 5vh, 58px);
+}
+
+/* Маленькая строка "Привет, я".
+   Размер специально близок к hero__lead.
+*/
+.hero__eyebrow {
+  margin: 0 0 18px;
+  color: var(--color-muted);
+  font-family: var(--font-main);
+  font-size: clamp(17px, 1.45vw, 23px);
+  line-height: 1.52;
+  letter-spacing: -0.02em;
+}
+
+/* Главный заголовок.
+   Должен быть:
+   1) Егор Звада —
+   2) системный администратор
+   3) и технический специалист мероприятий
+*/
+.hero__title {
+  max-width: 1180px;
+  font-size: clamp(42px, 5.6vw, 96px);
+  font-weight: 430;
+  letter-spacing: -0.035em;
+  line-height: .98;
+}
+
+/* Каждая строка заголовка отдельным блоком. */
+.hero__title-line,
+.hero__title span {
+  display: block;
+}
+
+/* Строка с именем. */
+.hero__title-line--name,
+.hero__title span:first-child {
+  white-space: nowrap;
+  font-size: clamp(42px, 5.6vw, 96px);
+  font-weight: 520;
+  letter-spacing: -0.035em;
+}
+
+/* Строки роли.
+   white-space: nowrap держит "системный администратор" в одну строку на десктопе.
+*/
+.hero__title-line--role,
+.hero__title span:nth-child(2),
+.hero__title span:nth-child(3) {
+  white-space: nowrap;
+  font-size: clamp(36px, 4.8vw, 82px);
+  font-weight: 340;
+  letter-spacing: -0.028em;
+}
+
+/* Описание под заголовком. */
+.hero__lead {
+  max-width: 700px;
+  margin: 30px 0 0;
+  color: var(--color-muted);
+  font-size: clamp(17px, 1.45vw, 23px);
+  line-height: 1.52;
+}
+
+/* Кнопки на первом экране. */
+.hero__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 38px;
+  flex-wrap: wrap;
+}
+
+/* Нижние технические строки. */
+.hero__status {
+  margin-top: 34px;
+}
+
+/* Индикатор scroll справа снизу. */
+.hero__scroll {
+  position: absolute;
+  right: max(24px, calc((100vw - var(--container)) / 2));
+  bottom: 34px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-muted-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+
+.hero__scroll i {
+  position: relative;
+  width: 1px;
+  height: 42px;
+  background: var(--color-line-strong);
+  overflow: hidden;
+}
+
+.hero__scroll i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--color-text);
+  transform: translateY(-100%);
+  animation: scrollLine 1800ms cubic-bezier(.22, 1, .36, 1) infinite;
+}
+
+@keyframes scrollLine {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+
+/* =========================================================
+   REVEAL ANIMATION
+   Общая анимация появления элементов.
+   Если надо отключить/ослабить появление — править тут.
+   ========================================================= */
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity var(--transition-slow), transform var(--transition-slow);
+}
+
+.js-ready .hero.is-visible [data-reveal],
+.js-ready .hero [data-reveal] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.js-ready .hero [data-reveal]:nth-child(1) { transition-delay: 80ms; }
+.js-ready .hero [data-reveal]:nth-child(2) { transition-delay: 160ms; }
+.js-ready .hero [data-reveal]:nth-child(3) { transition-delay: 240ms; }
+.js-ready .hero [data-reveal]:nth-child(4) { transition-delay: 330ms; }
+.js-ready .hero [data-reveal]:nth-child(5) { transition-delay: 420ms; }
+
+
+/* =========================================================
+   SHARED SECTION SMALL FIXES
+   Общие точечные настройки для разных секций.
+   ========================================================= */
+
+.about .media-card,
+.tavrida .media-card {
+  min-height: 420px;
+}
+
+.skills .section__heading {
+  max-width: 740px;
+}
+
+.contacts {
+  min-height: auto;
+}
+
+
+/* =========================================================
+   HERO RESPONSIVE
+   Адаптация первого экрана.
+   ========================================================= */
+
+/* Средние экраны: оставляем меньше места под правую анимацию. */
+@media (max-width: 1200px) {
+  .hero__inner {
+    padding-right: min(12vw, 160px);
+  }
+
+  .hero__title-line--role,
+  .hero__title span:nth-child(2),
+  .hero__title span:nth-child(3) {
+    font-size: clamp(34px, 4.4vw, 68px);
+  }
+}
+
+/* Планшеты/узкие окна/инспектор: разрешаем переносы, чтобы не ломало страницу. */
+@media (max-width: 1060px) {
+  .hero__inner {
+    padding-right: 0;
+  }
+
+  .hero__title {
+    max-width: 100%;
+  }
+
+  .hero__title-line--name,
+  .hero__title-line--role,
+  .hero__title span:first-child,
+  .hero__title span:nth-child(2),
+  .hero__title span:nth-child(3) {
+    white-space: normal;
+  }
+
+  .hero__visual {
+    opacity: .52;
+    mask-image: linear-gradient(90deg, transparent 0%, black 20%, black 100%);
+  }
+
+  .hero__frame {
+    width: min(58vw, 520px);
+  }
+}
+
+/* Телефон: уменьшаем заголовки и убираем scroll-индикатор. */
+@media (max-width: 700px) {
+  .hero {
+    min-height: 92svh;
+    padding-top: calc(var(--header-height) + 46px);
+  }
+
+  .hero__meta {
+    margin-bottom: 34px;
+  }
+
+  .hero__eyebrow,
+  .hero__lead {
+    font-size: 16px;
+  }
+
+  .hero__title {
+    max-width: 100%;
+    font-size: clamp(34px, 10vw, 58px);
+    letter-spacing: -0.03em;
+  }
+
+  .hero__title-line--name,
+  .hero__title-line--role,
+  .hero__title span:first-child,
+  .hero__title span:nth-child(2),
+  .hero__title span:nth-child(3) {
+    white-space: normal;
+  }
+
+  .hero__title-line--name,
+  .hero__title span:first-child {
+    font-size: clamp(34px, 10vw, 58px);
+  }
+
+  .hero__title-line--role,
+  .hero__title span:nth-child(2),
+  .hero__title span:nth-child(3) {
+    font-size: clamp(30px, 8.6vw, 50px);
+  }
+
+  .hero__visual {
+    opacity: .36;
+  }
+
+  .hero__scroll {
+    display: none;
+  }
+}
+
+
+/* =========================================================
+   ABOUT SECTION
+   Блок "Обо мне".
+   Тут правятся:
+   - сетка 3 колонок
+   - sticky-заголовок
+   - декоративная визуальная карточка справа
+   ========================================================= */
+
+.about {
+  min-height: 92vh;
+  overflow: hidden;
+}
+
+/* Декоративные вертикальные линии справа. */
+.about::after {
+  content: "";
+  position: absolute;
+  right: max(24px, calc((100vw - var(--container)) / 2));
+  top: 118px;
+  bottom: 118px;
+  width: min(34vw, 420px);
+  border-right: 1px solid var(--color-line-soft);
+  border-left: 1px solid var(--color-line-soft);
+  pointer-events: none;
+  opacity: .6;
+  z-index: -1;
+}
+
+/* Основная сетка about: заголовок / текст / визуал. */
+.about__layout {
+  display: grid;
+  grid-template-columns: minmax(220px, .82fr) minmax(330px, 1fr) minmax(320px, .94fr);
+  gap: clamp(30px, 4vw, 58px);
+  align-items: start;
+}
+
+/* Заголовок "Обо мне".
+   top/margin-top двигают его вверх/вниз на десктопе.
+*/
+.about__heading {
+  position: sticky;
+  top: -100px;
+  margin-top: -58px;
+}
+
+.about__lead {
+  margin: 22px 0 0;
+  max-width: 340px;
+  color: var(--color-muted);
+  font-size: clamp(16px, 1.1vw, 18px);
+  line-height: 1.65;
+}
+
+.about__content {
+  color: var(--color-muted);
+  font-size: clamp(17px, 1.16vw, 20px);
+  line-height: 1.78;
+}
+
+.about__content p {
+  margin: 0 0 22px;
+}
+
+.about__content p:first-child {
+  color: var(--color-text-soft);
+  font-size: clamp(20px, 1.6vw, 28px);
+  line-height: 1.38;
+  letter-spacing: -0.035em;
+}
+
+/* Старые плашки в about.
+   Если их удалил из HTML — эти стили просто не используются.
+*/
+.about__focus {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 34px 0 28px;
+}
+
+.about__focus span {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--color-line-soft);
+  color: var(--color-muted);
+  background: var(--color-surface);
+  font: 11px/1.2 var(--font-mono);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+/* Правая визуальная карточка about. */
+.about-visual {
+  position: relative;
+  min-height: 520px;
+  padding: 18px;
+  border: 1px solid var(--color-line);
+  background:
+    linear-gradient(180deg, color-mix(in oklab, var(--color-bg-elevated) 78%, transparent), transparent 70%),
+    var(--color-bg-elevated);
+  box-shadow: var(--shadow-soft), var(--shadow-inner);
+  overflow: hidden;
+}
+
+/* Сетка поверх визуальной карточки. */
+.about-visual::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, var(--color-line-soft), transparent),
+    repeating-linear-gradient(90deg, transparent 0 34px, var(--color-line-soft) 34px 35px),
+    repeating-linear-gradient(0deg, transparent 0 34px, var(--color-line-soft) 34px 35px);
+  opacity: .34;
+  mask-image: radial-gradient(circle at 62% 38%, black 0%, transparent 74%);
+}
+
+/* Мягкое свечение внутри визуальной карточки. */
+.about-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 65% 20%, var(--color-glow-soft), transparent 30rem);
+  opacity: .8;
+}
+
+.about-visual__topline,
+.about-visual__grid {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--color-muted-2);
+  font: 11px/1 var(--font-mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.about-visual__screen {
+  position: relative;
+  z-index: 1;
+  min-height: 360px;
+  margin: 18px 0;
+  border: 1px solid var(--color-line-soft);
+  background:
+    radial-gradient(circle at 56% 18%, color-mix(in oklab, var(--color-text) 16%, transparent), transparent 20rem),
+    linear-gradient(180deg, transparent, var(--color-surface));
+  overflow: hidden;
+}
+
+.about-visual__screen::before {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 24%;
+  height: 1px;
+  background: var(--color-line-strong);
+  box-shadow: 0 0 36px color-mix(in oklab, var(--color-text) 22%, transparent);
+  transform: perspective(420px) rotateX(62deg) scaleX(1.22);
+  opacity: .65;
+}
+
+.about-visual__screen::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 20%;
+  width: 54%;
+  aspect-ratio: 1;
+  border: 1px solid var(--color-line);
+  transform: translateX(-50%) rotate(45deg);
+  opacity: .32;
+}
+
+/* Анимированные вертикальные лучи. */
+.about-visual__stage {
+  position: absolute;
+  inset: 34px 16px auto;
+  height: 190px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 12px;
+}
+
+.about-visual__stage span {
+  width: 1px;
+  background: linear-gradient(180deg, var(--color-text), transparent);
+  opacity: .24;
+  transform-origin: top;
+  animation: stageBeam 4.8s ease-in-out infinite;
+}
+
+.about-visual__stage span:nth-child(2) { animation-delay: -.9s; opacity: .36; }
+.about-visual__stage span:nth-child(3) { animation-delay: -1.8s; opacity: .48; }
+.about-visual__stage span:nth-child(4) { animation-delay: -2.5s; opacity: .32; }
+.about-visual__stage span:nth-child(5) { animation-delay: -3.4s; opacity: .22; }
+
+/* Нижняя "консоль" в визуальной карточке. */
+.about-visual__console {
+  position: absolute;
+  left: 11%;
+  right: 11%;
+  bottom: 44px;
+  height: 92px;
+  border: 1px solid var(--color-line);
+  background: color-mix(in oklab, var(--color-bg) 72%, transparent);
+  transform: perspective(540px) rotateX(55deg);
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  padding: 18px;
+}
+
+.about-visual__console i {
+  display: block;
+  border: 1px solid var(--color-line-soft);
+  background: linear-gradient(180deg, var(--color-surface-strong), transparent);
+  opacity: .9;
+}
+
+.about-visual__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.about-visual__grid span {
+  padding: 12px;
+  border: 1px solid var(--color-line-soft);
+  background: var(--color-surface);
+}
+
+@keyframes stageBeam {
+  0%, 100% {
+    transform: scaleY(.7) translateX(0);
+    opacity: .18;
+  }
+
+  45% {
+    transform: scaleY(1.05) translateX(6px);
+    opacity: .46;
+  }
+}
+
+
+/* =========================================================
+   SKILLS SECTION
+   Блок "Навыки".
+   Тут правятся:
+   - верхняя сетка skills__top
+   - описание справа
+   - rail над карточками
+   - сетка карточек
+   ========================================================= */
+
+.skills {
+  overflow: hidden;
+}
+
+.skills::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 16% 22%, var(--color-glow-faint), transparent 34rem),
+    linear-gradient(180deg, transparent, color-mix(in oklab, var(--color-surface) 44%, transparent) 56%, transparent);
+  opacity: .92;
+}
+
+.skills__top {
+  display: grid;
+  grid-template-columns: minmax(280px, .92fr) minmax(320px, .78fr);
+  gap: clamp(28px, 5vw, 76px);
+  align-items: end;
+  margin-bottom: clamp(36px, 5vw, 68px);
+}
+
+.skills__intro {
+  display: grid;
+  gap: 18px;
+  color: var(--color-muted);
+  font-size: clamp(16px, 1.15vw, 19px);
+  line-height: 1.66;
+}
+
+.skills__intro p {
+  margin: 0;
+}
+
+.skills-panel {
+  position: relative;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line-soft);
+  padding: 18px 0 0;
+}
+
+.skills-panel__rail {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 2px 18px;
+  color: var(--color-muted-2);
+  font: 10px/1 var(--font-mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--color-line-soft);
+  border: 1px solid var(--color-line-soft);
+  transition: background var(--transition), border-color var(--transition);
+}
+
+
+/* =========================================================
+   PROJECTS SECTION
+   Блок "Портфолио".
+   Тут правятся:
+   - выравнивание заголовка и правого текста
+   - фон верхней части
+   - размеры карточек
+   ========================================================= */
+
+.projects {
+  overflow: hidden;
+}
+
+/* Убираем обрубленный серый фон у верхней части портфолио. */
+.projects::before {
+  display: none;
+}
+
+/* Верх портфолио сделан по логике skills: слева заголовок, справа описание. */
+.projects__top {
+  display: grid;
+  grid-template-columns: minmax(280px, .92fr) minmax(320px, .78fr);
+  gap: clamp(28px, 5vw, 76px);
+  align-items: start;
+  margin-bottom: clamp(36px, 5vw, 68px);
+}
+
+/* Левый блок с "03 / portfolio" и "Портфолио". */
+.projects .section__heading {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  transform: none;
+}
+
+.projects .section__heading h2 {
+  margin: 0;
+}
+
+/* Правый текст "Здесь собраны..."
+   padding-top выравнивает его по русскому заголовку "Портфолио".
+   Если текст выше/ниже — править только padding-top.
+*/
+.projects__intro {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding-top: calc(12px * 1.45 + 24px);
+  transform: none;
+  color: var(--color-muted);
+  font-size: clamp(16px, 1.15vw, 19px);
+  line-height: 1.66;
+}
+
+.projects__intro p {
+  margin: 0;
+}
+
+/* Карточки портфолио.
+   nth-child(2n) оставлен таким же, чтобы карточки не плясали через одну.
+*/
+.projects .project-card,
+.projects .project-card:nth-child(2n) {
+  grid-template-columns: minmax(260px, .88fr) minmax(300px, 1.12fr);
+  min-height: 296px;
+}
+
+.projects .project-card__media {
+  min-height: 280px;
+}
+
+.projects .project-media {
+  min-height: 256px;
+  height: 100%;
+}
+
+.projects .project-media__image,
+.projects .project-media__video {
+  min-height: 256px;
+}
+
+/* Открытая карточка проекта. */
+.projects .project-card.is-open,
+.projects .project-card.is-open:nth-child(2n) {
+  grid-template-columns: minmax(360px, 1.03fr) minmax(360px, .97fr);
+  min-height: 520px;
+}
+
+/* Карточка "Скрыть проекты". */
+.projects .project-card--collapse,
+.projects .project-card--collapse:nth-child(2n) {
+  grid-template-columns: auto 1fr auto;
+  min-height: 132px;
+}
+
+
+/* =========================================================
+   TAVRIDA SECTION
+   Блок "Почему Таврида".
+   Тут правятся:
+   - сетка 3 колонок
+   - sticky-заголовок
+   - карточка текста
+   - визуальная canvas/графика
+   ========================================================= */
+
+.tavrida {
+  overflow: hidden;
+}
+
+.tavrida__layout {
+  display: grid;
+  grid-template-columns: minmax(220px, .72fr) minmax(360px, 1fr) minmax(300px, .86fr);
+  gap: clamp(28px, 4vw, 58px);
+  align-items: stretch;
+}
+
+.tavrida__heading {
+  align-self: start;
+  position: sticky;
+  top: -100px;
+  margin-top: -58px;
+}
+
+.tavrida__lead {
+  margin: 20px 0 0;
+  color: var(--color-muted);
+  max-width: 360px;
+  font-size: clamp(16px, 1.08vw, 18px);
+  line-height: 1.68;
+}
+
+.tavrida__story {
+  position: relative;
+  min-height: 460px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(26px, 3vw, 42px);
+  border: 1px solid var(--color-line);
+  background:
+    linear-gradient(135deg, var(--color-surface), transparent 46%),
+    color-mix(in oklab, var(--color-bg-elevated) 86%, transparent);
+  box-shadow: var(--shadow-soft), var(--shadow-inner);
+  overflow: hidden;
+}
+
+.tavrida__story::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--color-line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-line-soft) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: .18;
+  mask-image: linear-gradient(135deg, black, transparent 70%);
+}
+
+.tavrida__text {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(18px, 1.35vw, 24px);
+  line-height: 1.58;
+  letter-spacing: -0.025em;
+}
+
+.tavrida__text p {
+  margin: 0 0 22px;
+  color: var(--color-text-soft);
+}
+
+.tavrida__text .read-more__extra {
+  font-size: clamp(16px, 1.06vw, 19px);
+  line-height: 1.72;
+  letter-spacing: 0;
+  color: var(--color-muted);
+}
+
+.tavrida__actions {
+  position: relative;
+  z-index: 1;
+  margin-top: 28px;
+}
+
+.tavrida-visual {
+  position: relative;
+  min-height: 460px;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  background: var(--color-bg-elevated);
+  box-shadow: var(--shadow-soft), var(--shadow-inner);
+}
+
+.tavrida-visual__image {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 42% 24%, color-mix(in oklab, var(--color-text) 18%, transparent), transparent 18rem),
+    linear-gradient(118deg, transparent 0 26%, var(--color-line-soft) 26% 27%, transparent 27% 46%, var(--color-line) 46% 47%, transparent 47%),
+    linear-gradient(180deg, transparent, color-mix(in oklab, var(--color-bg) 82%, transparent)),
+    repeating-linear-gradient(90deg, color-mix(in oklab, var(--color-text) 6%, transparent) 0 1px, transparent 1px 34px),
+    linear-gradient(135deg, var(--color-bg-elevated), var(--color-bg));
+  filter: contrast(1.04) saturate(.9);
+}
+
+.tavrida-visual__image::before {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 14%;
+  bottom: 21%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-line-strong), transparent);
+  box-shadow: 0 -34px 0 var(--color-line-soft), 0 -86px 0 var(--color-line-soft), 0 -142px 0 var(--color-line-soft);
+  transform: perspective(420px) rotateX(56deg);
+  transform-origin: center bottom;
+}
+
+.tavrida-visual__image::after {
+  content: "";
+  position: absolute;
+  left: 16%;
+  bottom: 20%;
+  width: 72%;
+  height: 34%;
+  border: 1px solid var(--color-line-strong);
+  transform: perspective(520px) rotateX(58deg) rotateZ(-8deg);
+  opacity: .66;
+}
+
+.tavrida-visual__overlay {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tavrida-visual__overlay span {
+  min-height: 28px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--color-line-soft);
+  background: color-mix(in oklab, var(--color-bg) 70%, transparent);
+  color: var(--color-muted);
+  font: 11px/1 var(--font-mono);
+  letter-spacing: .04em;
+}
+
+
+/* =========================================================
+   CONTACTS SECTION
+   Блок контактов.
+   Десктоп:
+   - слева контакты
+   - по центру "Давайте создавать вместе_"
+   - справа QR + кнопка
+   Мобилка:
+   - всё в одну колонку
+   - фраза и QR центрируются
+   ========================================================= */
+
+.contacts {
+  overflow: hidden;
+  padding-top: clamp(54px, 6vw, 92px);
+  padding-bottom: clamp(58px, 7vw, 100px);
+}
+
+.contacts__layout {
+  display: grid;
+  grid-template-columns: minmax(260px, .9fr) minmax(280px, .78fr) minmax(150px, .34fr);
+  gap: clamp(28px, 5vw, 82px);
+  align-items: start;
+}
+
+.contacts__heading {
+  align-self: start;
+  position: sticky;
+  top: -100px;
+  margin-top: -58px;
+}
+
+.contacts__heading h2 {
+  margin-bottom: 34px;
+}
+
+.contact-list {
+  display: grid;
+  gap: 10px;
+  max-width: 390px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: .04em;
+  opacity: .72;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.contact-item::before {
+  content: ">";
+  flex: 0 0 auto;
+  color: var(--color-muted);
+}
+
+.contact-item:hover {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+.contact-item__label {
+  flex: 0 0 auto;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+.contact-item__label::after {
+  content: ":";
+}
+
+.contact-item__value {
+  color: var(--color-text);
+  text-transform: none;
+  word-break: break-word;
+}
+
+.contact-item__arrow {
+  display: none;
+}
+
+/* Центральная фраза "Давайте создавать вместе_". */
+.contacts__statement {
+  align-self: start;
+  padding-top: clamp(96px, 7vw, 132px);
+  font-size: clamp(38px, 3.8vw, 72px);
+  line-height: .94;
+  letter-spacing: -.045em;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+.contacts__statement p {
+  margin: 0;
+}
+
+/* Правая колонка QR + кнопка. */
+.contact-connect {
+  align-self: start;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: clamp(96px, 7vw, 132px);
+}
+
+.contact-qr {
+  width: min(100%, 168px);
+  display: grid;
+  gap: 14px;
+  justify-items: stretch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Ссылка вокруг настоящей картинки QR. */
+.contact-qr__link {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid var(--color-line-strong);
+  background: var(--color-bg);
+  overflow: hidden;
+  transition: opacity 220ms ease, transform 220ms ease, border-color 220ms ease;
+}
+
+.contact-qr__link:hover {
+  opacity: .86;
+  transform: translateY(-2px);
+  border-color: var(--color-text);
+}
+
+/* Настоящая картинка QR. */
+.contact-qr__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.contact-connect__button {
+  width: 100%;
+  min-height: 42px;
+  justify-content: center;
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   FOOTER
+   Нижняя часть сайта.
+   Десктоп:
+   - слева логотип + маленькая фраза
+   - центр копирайт
+   - справа кнопка наверх
+   Мобилка:
+   - всё вертикально и аккуратно
+   ========================================================= */
+
+.site-footer {
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--color-line);
+  padding: clamp(42px, 6vw, 72px) 0;
+  background: var(--color-bg);
+}
+
+/* Серая сетка/простыня в футере выключена. */
+.site-footer::before {
+  display: none;
+}
+
+/* Основная сетка футера. */
+.site-footer__inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(320px, auto) minmax(220px, 1fr);
+  align-items: center;
+  gap: clamp(22px, 4vw, 58px);
+}
+
+.site-footer__brand-block {
+  display: grid;
+  gap: 14px;
+  justify-self: start;
+}
+
+/* На случай если brand в футере имеет hover-линию из других CSS. */
+.site-footer .brand,
+.site-footer__brand,
+.site-footer__logo {
+  width: fit-content;
+  max-width: max-content;
+  border-bottom: 0;
+  text-decoration: none;
+}
+
+.site-footer .brand::after,
+.site-footer__brand::after,
+.site-footer__logo::after,
+.site-footer .brand:hover::after,
+.site-footer__brand:hover::after,
+.site-footer__logo:hover::after {
+  display: none;
+  content: none;
+}
+
+/* Фраза "Техника. Сцена. Системы."
+   Важно: тут фиксированный маленький размер, чтобы на мобилке не раздувалась.
+*/
+.site-footer__phrase {
+  max-width: max-content;
+  margin: 0;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* Центральный блок копирайта. */
+.site-footer__meta {
+  justify-self: center;
+  text-align: center;
+  display: grid;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.site-footer__copy,
+.site-footer__version {
+  margin: 0;
+}
+
+.site-footer__version {
+  font-family: var(--font-mono);
+  color: var(--color-muted-2);
+}
+
+/* Кнопка наверх справа. */
+.site-footer__top {
+  justify-self: end;
+  align-self: center;
+}
+
+
+/* =========================================================
+   MOTION SURFACE TUNING
+   Декоративные слои поверх hero и tavrida-анимации.
+   ========================================================= */
+
+.hero__visual::before,
+.hero__visual::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero__visual::before {
+  inset: 11vh max(18px, 5vw) 14vh 38vw;
+  border: 1px solid var(--color-line-soft);
+  opacity: .34;
+  transform: skewX(-7deg);
+}
+
+.hero__visual::after {
+  right: max(20px, calc((100vw - var(--container)) / 2));
+  top: 32vh;
+  width: min(38vw, 520px);
+  height: min(38vw, 520px);
+  border: 1px solid var(--color-line-soft);
+  opacity: .18;
+  transform: rotate(42deg);
+  mask-image: linear-gradient(135deg, black, transparent 72%);
+}
+
+.tavrida-visual__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  opacity: .88;
+  mix-blend-mode: normal;
+}
+
+.tavrida-visual__image {
+  z-index: 1;
+}
+
+.tavrida-visual__overlay {
+  z-index: 3;
+}
+
+.tavrida-visual::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, var(--color-bg) 0%, transparent 28%, transparent 68%, color-mix(in oklab, var(--color-bg) 72%, transparent) 100%),
+    linear-gradient(180deg, transparent 0%, color-mix(in oklab, var(--color-bg) 70%, transparent) 100%);
+  opacity: .62;
+}
+
+.tavrida-visual__overlay {
+  bottom: 18px;
+}
+
+.motion-ready .hero__frame,
+.motion-ready .tavrida-visual {
+  transition: opacity var(--transition), transform var(--transition);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .tavrida-visual__canvas {
+    opacity: .70;
+  }
+
+  :root:not([data-theme="dark"]) .hero__visual {
+    opacity: .70;
+  }
+}
+
+:root[data-theme="light"] .tavrida-visual__canvas {
+  opacity: .70;
+}
+
+:root[data-theme="light"] .hero__visual {
+  opacity: .70;
+}
+
+
+/* =========================================================
+   TABLET / MOBILE SECTION RESPONSIVE
+   Общая адаптация нижних секций.
+   ========================================================= */
+
+@media (max-width: 1060px) {
+  /* About на планшетах/телефонах становится одной колонкой. */
+  .about__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .about__heading {
+    position: static;
+    top: auto;
+    margin-top: 0;
+  }
+
+  .about::after {
+    display: none;
+  }
+
+  .about-visual {
+    min-height: 420px;
+  }
+
+  /* Skills на узких экранах. */
+  .skills__top {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .skills-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Projects на узких экранах. */
+  .projects__top {
+    grid-template-columns: 1fr;
+  }
+
+  .projects__intro {
+    padding-top: 0;
+  }
+
+  .projects .project-card,
+  .projects .project-card:nth-child(2n),
+  .projects .project-card.is-open,
+  .projects .project-card.is-open:nth-child(2n) {
+    grid-template-columns: 1fr;
+  }
+
+  .projects .project-card__media,
+  .projects .project-media,
+  .projects .project-media__image,
+  .projects .project-media__video {
+    min-height: 260px;
+  }
+
+  /* Tavrida на узких экранах. */
+  .tavrida__layout {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .tavrida__heading {
+    position: static;
+    top: auto;
+    margin-top: 0;
+  }
+
+  .tavrida__story,
+  .tavrida-visual {
+    min-height: 360px;
+  }
+
+  /* Contacts на планшетах/телефонах. */
+  .contacts__layout {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+
+  .contacts__heading {
+    position: static;
+    top: auto;
+    margin-top: 0;
+  }
+
+  .contacts__statement {
+    padding-top: 0;
+    text-align: center;
+    font-size: clamp(38px, 10vw, 72px);
+  }
+
+  .contact-connect {
+    justify-content: center;
+    padding-top: 0;
+  }
+
+  .contact-qr {
+    width: 180px;
+    margin-inline: auto;
+  }
+
+  /* Footer на планшетах/телефонах. */
+  .site-footer__inner {
+    grid-template-columns: 1fr;
+    align-items: center;
+    justify-items: center;
+    text-align: center;
+    gap: 26px;
+  }
+
+  .site-footer__brand-block {
+    justify-self: center;
+    justify-items: center;
+  }
+
+  .site-footer__phrase {
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .site-footer__meta {
+    justify-self: center;
+    text-align: center;
+  }
+
+  .site-footer__top {
+    justify-self: center;
+  }
+}
+
+@media (max-width: 700px) {
+  /* Skills: на телефоне карточки в одну колонку. */
+  .skills-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Contacts: компактнее и ровнее на телефоне. */
+  .contacts {
+    padding-top: 56px;
+    padding-bottom: 64px;
+  }
+
+  .contacts__layout {
+    gap: 28px;
+  }
+
+  .contacts__heading {
+    text-align: center;
+  }
+
+  .contacts__heading h2 {
+    margin-bottom: 24px;
+  }
+
+  .contact-list {
+    max-width: 100%;
+    justify-items: center;
+  }
+
+  .contact-item {
+    justify-content: center;
+    text-align: center;
+    flex-wrap: wrap;
+  }
+
+  .contacts__statement {
+    font-size: clamp(34px, 11vw, 58px);
+    line-height: .98;
+    letter-spacing: -0.04em;
+  }
+
+  .contact-qr {
+    width: 164px;
+    gap: 10px;
+  }
+
+  .contact-connect__button {
+    min-height: 40px;
+  }
+
+  /* Footer: телефонная версия, ничего не раздувается. */
+  .site-footer {
+    padding: 40px 0;
+  }
+
+  .site-footer__inner {
+    gap: 22px;
+  }
+
+  .site-footer__phrase {
+    font-size: 11px;
+    line-height: 1.5;
+    letter-spacing: .07em;
+  }
+
+  .site-footer__meta {
+    font-size: 12px;
+  }
+}
+/* =========================================================
+   FINAL MOBILE FIXES
+   Жёсткие правки мобилки: контакты + футер.
+   Добавлены в конец, чтобы перебить старые стили.
+   ========================================================= */
+
+@media (max-width: 700px) {
+  /* Контакты: QR и кнопка вместе, по центру */
+  .contact-connect {
+    justify-content: center;
+    padding-top: 0;
+  }
+
+  .contact-qr {
+    width: 164px;
+    margin-inline: auto;
+    display: grid;
+    gap: 12px;
+    justify-items: stretch;
+  }
+
+  .contact-qr__link {
+    width: 164px;
+    height: 164px;
+  }
+
+  .contact-qr__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Кнопка "Связаться": убираем огромную высоту */
+  .contact-connect__button,
+  .contact-qr .button,
+  .contacts .button {
+    width: 164px;
+    min-height: 44px;
+    height: 44px;
+    padding: 0 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  /* Футер: нормальная мобильная колонка */
+  .site-footer {
+    padding: 38px 0 34px;
+    background: var(--color-bg);
+  }
+
+  .site-footer::before {
+    display: none;
+  }
+
+  .site-footer__inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 22px;
+    justify-items: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .site-footer__brand-block {
+    justify-self: center;
+    justify-items: center;
+    gap: 12px;
+  }
+
+  /* Убираем любые длинные линии от логотипа/бренда в футере */
+  .site-footer .brand,
+  .site-footer .brand:hover,
+  .site-footer__brand,
+  .site-footer__brand:hover,
+  .site-footer__logo,
+  .site-footer__logo:hover {
+    width: fit-content;
+    max-width: max-content;
+    border-bottom: 0;
+    text-decoration: none;
+  }
+
+  .site-footer .brand::before,
+  .site-footer .brand::after,
+  .site-footer__brand::before,
+  .site-footer__brand::after,
+  .site-footer__logo::before,
+  .site-footer__logo::after {
+    display: none;
+    content: none;
+  }
+
+  /* Фраза "Техника. Сцена. Системы." — принудительно маленькая */
+  .site-footer__phrase {
+    max-width: 260px;
+    margin: 0;
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: 11px !important;
+    line-height: 1.5;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .site-footer__meta {
+    justify-self: center;
+    text-align: center;
+    font-size: 12px;
+    gap: 8px;
+  }
+
+  .site-footer__copy,
+  .site-footer__version {
+    margin: 0;
+  }
+
+  .site-footer__top {
+    justify-self: center;
+    width: 100%;
+  }
+
+  .site-footer__top .button,
+  .site-footer .button {
+    width: 100%;
+    max-width: 320px;
+    min-height: 48px;
+    height: 48px;
+    justify-content: center;
+  }
+}

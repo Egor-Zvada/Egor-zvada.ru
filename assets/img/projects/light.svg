@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Сценический свет">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101010" stop-opacity=".95"/>
+      <stop offset=".52" stop-color="#111" stop-opacity="1"/>
+      <stop offset="1" stop-color="#0c1114" stop-opacity=".9"/>
+    </linearGradient>
+    <radialGradient id="r" cx="62%" cy="38%" r="58%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".62"/>
+      <stop offset=".46" stop-color="#ffffff" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#050505" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="noise" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 .08"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1200" height="720" fill="url(#g)"/>
+  <rect width="1200" height="720" fill="url(#r)"/>
+  <g opacity=".22" stroke="#fff" stroke-width="1"><path d="M0 0V720"/><path d="M80 0V720"/><path d="M160 0V720"/><path d="M240 0V720"/><path d="M320 0V720"/><path d="M400 0V720"/><path d="M480 0V720"/><path d="M560 0V720"/><path d="M640 0V720"/><path d="M720 0V720"/><path d="M800 0V720"/><path d="M880 0V720"/><path d="M960 0V720"/><path d="M1040 0V720"/><path d="M1120 0V720"/><path d="M1200 0V720"/><path d="M0 0H1200"/><path d="M0 80H1200"/><path d="M0 160H1200"/><path d="M0 240H1200"/><path d="M0 320H1200"/><path d="M0 400H1200"/><path d="M0 480H1200"/><path d="M0 560H1200"/><path d="M0 640H1200"/><path d="M0 720H1200"/></g>
+
+  <g fill="none" stroke="#fff" stroke-opacity=".72">
+    <path d="M260 70L480 620" stroke-width="3" opacity=".6"/>
+    <path d="M560 60L565 630" stroke-width="3" opacity=".8"/>
+    <path d="M900 80L650 640" stroke-width="3" opacity=".55"/>
+    <path d="M150 540h900" stroke-width="2" opacity=".45"/>
+    <circle cx="560" cy="210" r="92" stroke-width="2" opacity=".34"/>
+  </g>
+  <g fill="#fff" opacity=".65">
+    <circle cx="260" cy="70" r="18"/><circle cx="560" cy="60" r="18"/><circle cx="900" cy="80" r="18"/>
+    <path d="M360 590h410l85 82H275z" opacity=".16"/>
+  </g>
+  <rect width="1200" height="720" filter="url(#noise)"/>
+  <rect x="22" y="22" width="1156" height="676" fill="none" stroke="#fff" stroke-opacity=".24"/>
+</svg>

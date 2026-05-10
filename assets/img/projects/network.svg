@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" role="img" aria-label="Сети и шоу-протоколы">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0d0f" stop-opacity=".95"/>
+      <stop offset=".52" stop-color="#111" stop-opacity="1"/>
+      <stop offset="1" stop-color="#111" stop-opacity=".9"/>
+    </linearGradient>
+    <radialGradient id="r" cx="62%" cy="38%" r="58%">
+      <stop offset="0" stop-color="#88fff2" stop-opacity=".62"/>
+      <stop offset=".46" stop-color="#88fff2" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#050505" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="noise" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 .08"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="1200" height="720" fill="url(#g)"/>
+  <rect width="1200" height="720" fill="url(#r)"/>
+  <g opacity=".22" stroke="#fff" stroke-width="1"><path d="M0 0V720"/><path d="M80 0V720"/><path d="M160 0V720"/><path d="M240 0V720"/><path d="M320 0V720"/><path d="M400 0V720"/><path d="M480 0V720"/><path d="M560 0V720"/><path d="M640 0V720"/><path d="M720 0V720"/><path d="M800 0V720"/><path d="M880 0V720"/><path d="M960 0V720"/><path d="M1040 0V720"/><path d="M1120 0V720"/><path d="M1200 0V720"/><path d="M0 0H1200"/><path d="M0 80H1200"/><path d="M0 160H1200"/><path d="M0 240H1200"/><path d="M0 320H1200"/><path d="M0 400H1200"/><path d="M0 480H1200"/><path d="M0 560H1200"/><path d="M0 640H1200"/><path d="M0 720H1200"/></g>
+
+  <g fill="none" stroke="#fff" stroke-opacity=".62">
+    <path d="M245 180h910M245 360h910M245 540h910" stroke-width="2" opacity=".38"/>
+    <path d="M300 160v420M520 160v420M740 160v420M960 160v420" stroke-width="2" opacity=".38"/>
+    <path d="M300 180l220 180 220-180 220 360M300 540l220-180 220 180 220-180" stroke-width="4"/>
+  </g>
+  <g fill="#fff" opacity=".8">
+    <circle cx="300" cy="180" r="14"/><circle cx="520" cy="360" r="14"/><circle cx="740" cy="180" r="14"/><circle cx="960" cy="540" r="14"/>
+    <circle cx="300" cy="540" r="10"/><circle cx="740" cy="540" r="10"/>
+  </g>
+  <rect width="1200" height="720" filter="url(#noise)"/>
+  <rect x="22" y="22" width="1156" height="676" fill="none" stroke="#fff" stroke-opacity=".24"/>
+</svg>

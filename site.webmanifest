@@ -1,0 +1,15 @@
+{
+  "name": "Егор Звада — портфолио",
+  "short_name": "egor_zvada",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    {
+      "src": "/assets/svg/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

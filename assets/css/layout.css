@@ -1,0 +1,222 @@
+.container { width: var(--container); margin-inline: auto; }
+.site-main { overflow: clip; }
+.section {
+  position: relative;
+  min-height: 84vh;
+  padding: 128px 0;
+  border-top: 1px solid var(--color-line-soft);
+  isolation: isolate;
+}
+.section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, var(--color-surface) 42%, transparent 100%);
+  opacity: .26;
+}
+.section__grid {
+  display: grid;
+  grid-template-columns: minmax(180px, .8fr) minmax(260px, 1.05fr) minmax(280px, 1fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: start;
+}
+.section__heading { position: relative; }
+.section__heading h2,
+.hero__title {
+  margin: 0;
+  letter-spacing: -0.055em;
+  line-height: .94;
+}
+.section__heading h2 { font-size: clamp(42px, 5vw, 84px); font-weight: 440; }
+.section__content {
+  color: var(--color-muted);
+  font-size: clamp(16px, 1.2vw, 20px);
+  line-height: 1.72;
+}
+.section__content p:first-child { margin-top: 0; }
+.card-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 34px; }
+.project-list { display: grid; gap: 14px; margin-top: 34px; }
+.section-headline-row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+/* =========================================================
+   MOBILE HEADER / MENU FIX
+   Фикс мобильной шапки:
+   - кнопка с точкой = переключатель темы
+   - кнопка с двумя линиями = меню
+   - меню открывается поверх страницы
+   ========================================================= */
+
+@media (max-width: 860px) {
+  /* сама шапка поверх всего */
+  .site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    background: color-mix(in oklab, var(--color-bg) 92%, transparent);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  /* внутренности шапки */
+  .site-header__inner,
+  .header__inner,
+  .site-header .container {
+    min-height: var(--header-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+
+  /* логотип */
+  .site-header .brand,
+  .brand {
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 2200;
+  }
+
+  /* блок кнопок справа */
+  .site-header__actions,
+  .header__actions {
+    position: relative;
+    z-index: 2200;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* кнопка темы и кнопка меню */
+  .theme-toggle,
+  .nav-toggle,
+  .menu-toggle,
+  .site-header__toggle {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-line-strong);
+    background: color-mix(in oklab, var(--color-bg) 82%, transparent);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  /* тема чуть тише, меню визуально главнее */
+  .theme-toggle {
+    opacity: .72;
+  }
+
+  .theme-toggle:hover,
+  .theme-toggle:focus-visible {
+    opacity: 1;
+  }
+
+  .nav-toggle,
+  .menu-toggle,
+  .site-header__toggle {
+    opacity: 1;
+  }
+
+  /* обычное десктопное меню на мобилке превращаем в панель */
+  .site-nav,
+  .header-nav,
+  .nav {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    z-index: 1900;
+
+    display: grid;
+    gap: 0;
+
+    padding: 18px 24px 26px;
+    border-bottom: 1px solid var(--color-line);
+    background: color-mix(in oklab, var(--color-bg) 96%, transparent);
+    backdrop-filter: blur(18px);
+
+    transform: translateY(-18px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+
+    transition:
+      opacity 220ms ease,
+      transform 220ms ease,
+      visibility 220ms ease;
+  }
+
+  /* ссылки внутри мобильного меню */
+  .site-nav a,
+  .header-nav a,
+  .nav a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    min-height: 48px;
+    padding: 0;
+
+    border-bottom: 1px solid var(--color-line-soft);
+
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+
+  .site-nav a::after,
+  .header-nav a::after,
+  .nav a::after {
+    content: "→";
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+  }
+
+  /* открытое состояние меню */
+  .site-header.is-menu-open .site-nav,
+  .site-header.is-menu-open .header-nav,
+  .site-header.is-menu-open .nav,
+  .site-header.nav-open .site-nav,
+  .site-header.nav-open .header-nav,
+  .site-header.nav-open .nav,
+  body.is-menu-open .site-nav,
+  body.is-menu-open .header-nav,
+  body.is-menu-open .nav,
+  body.nav-open .site-nav,
+  body.nav-open .header-nav,
+  body.nav-open .nav,
+  .site-nav.is-open,
+  .header-nav.is-open,
+  .nav.is-open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* когда меню открыто — запрещаем горизонтальный сдвиг страницы */
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  body.is-menu-open,
+  body.nav-open {
+    overflow-x: hidden;
+  }
+}

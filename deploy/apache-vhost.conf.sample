@@ -1,0 +1,13 @@
+<VirtualHost *:80>
+    ServerName egor-zvada.ru
+    ServerAlias www.egor-zvada.ru
+    DocumentRoot /var/www/egor-zvada.ru
+
+    <Directory /var/www/egor-zvada.ru>
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/egor-zvada.ru.error.log
+    CustomLog ${APACHE_LOG_DIR}/egor-zvada.ru.access.log combined
+</VirtualHost>

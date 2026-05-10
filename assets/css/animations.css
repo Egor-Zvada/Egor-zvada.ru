@@ -1,0 +1,82 @@
+[data-section] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 720ms cubic-bezier(.22, 1, .36, 1), transform 720ms cubic-bezier(.22, 1, .36, 1);
+}
+[data-section].is-visible { opacity: 1; transform: translateY(0); }
+.hero[data-section] { opacity: 1; transform: none; }
+.skill-card, .project-card, .media-card, .contact-cta { will-change: transform; }
+@keyframes cursorPulse { 0%, 55% { opacity: 1; } 56%, 100% { opacity: .15; } }
+.terminal-line::after {
+  content: "_";
+  display: inline-block;
+  margin-left: 4px;
+  animation: cursorPulse 1.2s steps(1) infinite;
+}
+@keyframes subtleNoiseShift { from { transform: translate3d(0,0,0); } to { transform: translate3d(-48px,-48px,0); } }
+@media (prefers-reduced-motion: no-preference) {
+  body::before { animation: subtleNoiseShift 18s linear infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  [data-section] { opacity: 1; transform: none; }
+}
+
+/* v04 — section-local reveal choreography */
+.js-ready .about.is-visible [data-reveal] {
+  opacity: 1;
+  transform: translateY(0);
+}
+.js-ready .about [data-reveal]:nth-child(1) { transition-delay: 80ms; }
+.js-ready .about [data-reveal]:nth-child(2) { transition-delay: 170ms; }
+.js-ready .about [data-reveal]:nth-child(3) { transition-delay: 260ms; }
+
+/* v07 — final section entrance choreography */
+.js-ready .tavrida.is-visible .tavrida__story,
+.js-ready .tavrida.is-visible .tavrida-visual,
+.js-ready .contacts.is-visible .contact-list,
+.js-ready .contacts.is-visible .contact-cta,
+.js-ready .contacts.is-visible .contact-qr {
+  opacity: 1;
+  transform: translateY(0);
+}
+.js-ready .tavrida__story,
+.js-ready .tavrida-visual,
+.js-ready .contact-list,
+.js-ready .contact-cta,
+.js-ready .contact-qr {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity var(--transition-slow), transform var(--transition-slow);
+}
+.js-ready .tavrida.is-visible .tavrida-visual,
+.js-ready .contacts.is-visible .contact-cta { transition-delay: 140ms; }
+.js-ready .contacts.is-visible .contact-qr { transition-delay: 240ms; }
+.site-footer__top span { transition: transform var(--transition); }
+.site-footer__top:hover span { transform: translateY(-4px); }
+
+/* v08 — one motion language for buttons/cards/visual layers */
+.button,
+.skill-card,
+.project-card,
+.contact-item,
+.site-nav__link {
+  transition-timing-function: cubic-bezier(.22, 1, .36, 1);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero__frame--top { animation: frameDriftTop 9s ease-in-out infinite alternate; }
+  .hero__frame--bottom { animation: frameDriftBottom 11s ease-in-out infinite alternate; }
+  .tavrida-visual__image::before { animation: tavridaPerspectiveScan 8s ease-in-out infinite alternate; }
+}
+@keyframes frameDriftTop {
+  from { transform: translate3d(-14px, 0, 0); opacity: .34; }
+  to { transform: translate3d(18px, 0, 0); opacity: .58; }
+}
+@keyframes frameDriftBottom {
+  from { transform: translate3d(18px, 0, 0); opacity: .30; }
+  to { transform: translate3d(-18px, 0, 0); opacity: .54; }
+}
+@keyframes tavridaPerspectiveScan {
+  from { transform: perspective(420px) rotateX(56deg) translateY(0); opacity: .32; }
+  to { transform: perspective(420px) rotateX(58deg) translateY(-14px); opacity: .60; }
+}
