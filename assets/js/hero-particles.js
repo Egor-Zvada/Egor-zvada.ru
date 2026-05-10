@@ -51,9 +51,9 @@
 
     const qualityPreset = () => {
       const level = M.motionLevel();
-      if (level === 'low') return { strands: 86, segments: 56, dpr: 1, speed: 0.72 };
-      if (level === 'medium') return { strands: 132, segments: 70, dpr: 1.35, speed: 0.84 };
-      return { strands: 190, segments: 86, dpr: 1.75, speed: 1 };
+      if (level === 'low') return { strands: 74, segments: 68, dpr: 1, speed: 0.78 };
+      if (level === 'medium') return { strands: 112, segments: 82, dpr: 1.35, speed: 0.9 };
+      return { strands: 156, segments: 96, dpr: 1.75, speed: 1 };
     };
 
     const themeColor = () => M.isLightTheme() ? 0x090909 : 0xf4f4f1;
@@ -69,22 +69,23 @@
       const lines = [];
       const points = [];
       for (let strand = 0; strand < strands; strand += 1) {
-        const family = strand % 4;
-        const band = (strand / Math.max(1, strands - 1)) * 2 - 1;
+        const family = strand % 5;
+        const band = Math.pow((strand / Math.max(1, strands - 1)) * 2 - 1, 1);
         const seed = Math.random() * 1000;
         const phase = seed * 0.017;
-        const amplitude = 0.035 + Math.random() * 0.12;
-        const flow = 0.55 + Math.random() * 1.25;
-        const segmentStep = family === 3 ? 2 : 1;
+        const amplitude = 0.025 + Math.random() * 0.095;
+        const flow = 0.42 + Math.random() * 1.45;
+        const lane = band * (0.22 + Math.random() * 0.88);
+        const segmentStep = family === 4 ? 2 : 1;
 
         for (let segment = 0; segment < segments - segmentStep; segment += segmentStep) {
           const a = segment / (segments - 1);
           const b = (segment + segmentStep) / (segments - 1);
-          lines.push({ u: a, band, family, phase, amplitude, flow, seed, strand });
-          lines.push({ u: b, band, family, phase, amplitude, flow, seed, strand });
+          lines.push({ u: a, band, lane, family, phase, amplitude, flow, seed, strand });
+          lines.push({ u: b, band, lane, family, phase, amplitude, flow, seed, strand });
 
           if (segment % 9 === 0 && Math.random() > 0.28) {
-            points.push({ u: a, band, family, phase, amplitude, flow, seed, strand });
+            points.push({ u: a, band, lane, family, phase, amplitude, flow, seed, strand });
           }
         }
       }
@@ -93,54 +94,47 @@
     }
 
     function sample(meta, time) {
-      const u = meta.u;
+      const stream = (meta.u + time * 0.035 * meta.flow + meta.phase * 0.011) % 1;
+      const u = stream;
       const band = meta.band;
       const t = time * meta.flow;
-      const spreadX = aspect * 1.22;
-      const spreadY = 1.16;
-      const weave = Math.sin(u * 18 + t + meta.phase) * meta.amplitude;
-      const ripple = Math.cos((u + band) * 10.5 - t * 0.8 + meta.phase) * meta.amplitude * 0.65;
-      const cellular = Math.sin((u * 2.4 + band * 1.7) * Math.PI + t * 0.48 + meta.seed) * 0.08;
-      let x = 0;
-      let y = 0;
+      const spreadX = aspect * 1.42;
+      const wakeEdge = Math.sin(u * Math.PI);
+      const weave = Math.sin(u * 22 + t + meta.phase) * meta.amplitude;
+      const ripple = Math.cos(u * 13.5 - t * 0.72 + meta.phase + band * 2.4) * meta.amplitude * 0.82;
+      const curl = Math.sin((u * 4.2 + band * 1.8) * Math.PI + t * 0.4 + meta.seed) * 0.12 * wakeEdge;
+      const braid = Math.sin(u * Math.PI * (meta.family + 2) + meta.phase) * 0.06 * wakeEdge;
+      const x = -spreadX + u * spreadX * 2;
+      let y = meta.lane * 0.78 + weave + ripple + curl + braid;
 
-      if (meta.family === 0) {
-        x = -spreadX + u * spreadX * 2;
-        y = band * 0.72 + weave + cellular;
-      } else if (meta.family === 1) {
-        x = -spreadX + u * spreadX * 2;
-        y = band * 0.42 + (u - 0.5) * 0.98 + weave * 1.2 + ripple;
-      } else if (meta.family === 2) {
-        x = -spreadX + u * spreadX * 2;
-        y = band * 0.42 - (u - 0.5) * 0.92 + weave * 1.15 - ripple;
-      } else {
-        const angle = u * Math.PI * 2;
-        const radius = 0.28 + Math.abs(band) * 0.68 + Math.sin(t + meta.phase) * 0.05;
-        x = Math.cos(angle + band * 1.7) * radius * aspect + band * aspect * 0.22;
-        y = Math.sin(angle * 1.22 + meta.phase) * radius * 0.72 + weave * 1.6;
-      }
+      if (meta.family === 1) y += (u - 0.5) * 0.22;
+      if (meta.family === 2) y -= (u - 0.5) * 0.20;
+      if (meta.family === 3) y += Math.sin(u * Math.PI * 2 + t * 0.35 + meta.phase) * 0.18;
+      if (meta.family === 4) y += Math.cos(u * Math.PI * 3 - t * 0.5 + meta.phase) * 0.16;
 
-      const fold = Math.sin(x * 2.8 + time * 0.55 + meta.phase) * Math.cos(y * 2.4 - time * 0.42);
-      x += fold * 0.12;
-      y += Math.sin(x * 3.2 - time * 0.7 + meta.phase) * 0.07;
+      let warpedX = x + Math.sin(y * 5 + t * 0.28 + meta.phase) * 0.08 * wakeEdge;
+      let warpedY = y;
+      const fold = Math.sin(warpedX * 2.2 + time * 0.42 + meta.phase) * Math.cos(warpedY * 3.6 - time * 0.34);
+      warpedX += fold * 0.075;
+      warpedY += fold * 0.09;
 
       if (Math.abs(scrollVelocity) > 0.1) {
-        x += scrollVelocity * 0.0025 * Math.sin(meta.phase + u * Math.PI);
-        y -= scrollVelocity * 0.0014;
+        warpedX += scrollVelocity * 0.0028 * Math.sin(meta.phase + u * Math.PI);
+        warpedY -= scrollVelocity * 0.0012;
       }
 
       if (pointer.strength > 0.01) {
-        const dx = x - pointer.x;
-        const dy = y - pointer.y;
+        const dx = warpedX - pointer.x;
+        const dy = warpedY - pointer.y;
         const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const radius = width < 760 ? 0.42 : 0.62;
+        const radius = width < 760 ? 0.44 : 0.72;
         const force = Math.max(0, 1 - dist / radius);
-        const wake = Math.sin(dist * 22 - time * 4.2 + meta.phase) * force * pointer.strength;
-        x += (dx / dist) * force * force * 0.26 * pointer.strength + wake * 0.045;
-        y += (dy / dist) * force * force * 0.20 * pointer.strength + Math.cos(dist * 18 - time * 3.4) * force * 0.04 * pointer.strength;
+        const wake = Math.sin(dist * 24 - time * 4.4 + meta.phase) * force * pointer.strength;
+        warpedX += (dx / dist) * force * force * 0.32 * pointer.strength + wake * 0.055;
+        warpedY += (dy / dist) * force * force * 0.25 * pointer.strength + Math.cos(dist * 18 - time * 3.4) * force * 0.05 * pointer.strength;
       }
 
-      return { x, y, z: fold * 0.16 };
+      return { x: warpedX, y: warpedY, z: fold * 0.14 };
     }
 
     function rebuild() {
@@ -180,7 +174,7 @@
       const lineMaterial = new THREE.LineBasicMaterial({
         color: themeColor(),
         transparent: true,
-        opacity: M.isLightTheme() ? 0.19 : 0.24,
+        opacity: M.isLightTheme() ? 0.16 : 0.31,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
@@ -192,8 +186,8 @@
       const pointMaterial = new THREE.PointsMaterial({
         color: themeColor(),
         transparent: true,
-        opacity: M.isLightTheme() ? 0.22 : 0.34,
-        size: width < 760 ? 0.006 : 0.0045,
+        opacity: M.isLightTheme() ? 0.20 : 0.42,
+        size: width < 760 ? 0.007 : 0.0055,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
       });
