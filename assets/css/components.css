@@ -966,6 +966,8 @@
     pointer-events: none;
   }
   .site-body.is-menu-open .site-header.is-at-top:not(.is-scrolled) .site-nav {
+    opacity: 1;
     pointer-events: auto;
+    transform: translateY(0);
   }
 }
