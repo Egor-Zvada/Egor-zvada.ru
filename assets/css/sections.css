@@ -856,14 +856,14 @@
 
 .tavrida__layout {
   display: grid;
+  gap: clamp(36px, 5vw, 72px);
+}
+
+.tavrida__body {
+  display: grid;
   grid-template-columns: minmax(360px, .95fr) minmax(420px, 1.05fr);
   gap: clamp(28px, 4vw, 58px);
   align-items: start;
-}
-
-.tavrida__copy {
-  display: grid;
-  gap: clamp(30px, 4vw, 54px);
 }
 
 .tavrida__heading {
@@ -936,7 +936,6 @@
 
 .tavrida-visual {
   position: relative;
-  margin-top: calc(clamp(42px, 5vw, 96px) + 20px + (1.68 * clamp(16px, 1.08vw, 18px) * 3) + clamp(30px, 4vw, 54px));
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid var(--color-line);

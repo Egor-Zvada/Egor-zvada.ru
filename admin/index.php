@@ -10,6 +10,7 @@ $projectsFile = $root . '/data/projects.php';
 $settingsFile = $root . '/data/settings.php';
 $contactsFile = $root . '/data/contacts.php';
 $aboutFile = $root . '/data/about.php';
+$tagsFile = $root . '/data/tags.php';
 $uploadWebDir = '/assets/img/uploads';
 $uploadFsDir = $root . $uploadWebDir;
 
@@ -140,6 +141,35 @@ function list_from_lines(string $value): array {
   $parts = preg_split('/\r\n|\r|\n/u', $value) ?: [];
   $parts = array_map('trim', $parts);
   return array_values(array_filter($parts, static fn($part) => $part !== ''));
+}
+
+function list_from_array($value): array {
+  if (!is_array($value)) {
+    return [];
+  }
+  $value = array_map(static fn($item) => trim((string) $item), $value);
+  return array_values(array_filter($value, static fn($item) => $item !== ''));
+}
+
+function categories_from_lines(string $value): array {
+  $categories = [];
+  foreach (list_from_lines($value) as $line) {
+    $parts = array_map('trim', explode('|', $line, 2));
+    $key = $parts[0] ?? '';
+    if ($key === '') {
+      continue;
+    }
+    $categories[$key] = $parts[1] ?? $key;
+  }
+  return $categories;
+}
+
+function categories_to_lines(array $categories): string {
+  $lines = [];
+  foreach ($categories as $key => $label) {
+    $lines[] = $key . ' | ' . $label;
+  }
+  return implode("\n", $lines);
 }
 
 function slugify(string $value): string {
@@ -279,7 +309,10 @@ try {
         'order' => max(1, (int) ($_POST['order'] ?? ($old['order'] ?? count($skills) + 1))),
         'level' => trim((string) ($_POST['level'] ?? '')),
         'category' => trim((string) ($_POST['category'] ?? '')),
-        'stack' => list_from_text((string) ($_POST['stack'] ?? '')),
+        'stack' => array_values(array_unique(array_merge(
+          list_from_array($_POST['stack_select'] ?? []),
+          list_from_text((string) ($_POST['stack'] ?? ''))
+        ))),
       ];
 
       if ($item['title'] === '') {
@@ -332,19 +365,26 @@ try {
 
       $image = save_upload('image_upload', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], $image);
 
+      $tagsData = load_assoc($GLOBALS['tagsFile']);
+      $projectCategories = $tagsData['project_categories'] ?? [];
+      $category = trim((string) ($_POST['category'] ?? ''));
+
       $item = [
         'id' => trim((string) ($_POST['id'] ?? '')) ?: slugify($title),
         'title' => $title,
         'date' => trim((string) ($_POST['date'] ?? '')) ?: date('Y-m-d'),
-        'category' => trim((string) ($_POST['category'] ?? '')),
-        'category_label' => trim((string) ($_POST['category_label'] ?? '')),
+        'category' => $category,
+        'category_label' => trim((string) ($_POST['category_label'] ?? '')) ?: ($projectCategories[$category] ?? $category),
         'description' => trim((string) ($_POST['description'] ?? '')),
         'full_description' => trim((string) ($_POST['full_description'] ?? '')),
         'image' => $image,
         'default_image' => $defaultImage,
         'gallery' => array_values(array_unique(array_merge($manualGallery, $uploadedGallery))),
         'video' => trim((string) ($_POST['video'] ?? '')) ?: null,
-        'tags' => list_from_text((string) ($_POST['tags'] ?? '')),
+        'tags' => array_values(array_unique(array_merge(
+          list_from_array($_POST['tags_select'] ?? []),
+          list_from_text((string) ($_POST['tags'] ?? ''))
+        ))),
         'tools' => list_from_text((string) ($_POST['tools'] ?? '')),
       ];
 
@@ -440,6 +480,17 @@ try {
       }
 
       redirect_admin('settings', 'Доступ к админке сохранён.');
+    } elseif ($action === 'save_tags') {
+      require_login();
+      check_csrf();
+
+      $tags = [
+        'skill_tags' => list_from_lines((string) ($_POST['skill_tags'] ?? '')),
+        'project_tags' => list_from_lines((string) ($_POST['project_tags'] ?? '')),
+        'project_categories' => categories_from_lines((string) ($_POST['project_categories'] ?? '')),
+      ];
+      save_assoc($GLOBALS['tagsFile'], $tags);
+      redirect_admin('tags', 'Теги сохранены.');
     }
   }
 } catch (Throwable $exception) {
@@ -452,6 +503,10 @@ $projects = $loggedIn ? load_items($projectsFile) : [];
 $settings = $loggedIn ? load_assoc($settingsFile) : [];
 $contacts = $loggedIn ? load_assoc($contactsFile) : [];
 $about = $loggedIn ? load_assoc($aboutFile) : [];
+$tags = $loggedIn ? load_assoc($tagsFile) : [];
+$skillTags = $tags['skill_tags'] ?? [];
+$projectTags = $tags['project_tags'] ?? [];
+$projectCategories = $tags['project_categories'] ?? [];
 $editSkill = isset($_GET['edit_skill'], $skills[(int) $_GET['edit_skill']]) ? $skills[(int) $_GET['edit_skill']] : null;
 $editSkillIndex = $editSkill === null ? '' : (string) ((int) $_GET['edit_skill']);
 $editProject = isset($_GET['edit_project'], $projects[(int) $_GET['edit_project']]) ? $projects[(int) $_GET['edit_project']] : null;
@@ -476,6 +531,9 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
     .nav a, button, .button { min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 14px; border: 1px solid var(--line); background: var(--soft); color: var(--text); text-decoration: none; cursor: pointer; }
     .nav a.is-active, button.primary, .button.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
     .grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 18px; align-items: start; }
+    .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
+    .settings-grid .panel { height: 100%; }
+    .settings-grid .panel--wide { grid-column: 1 / -1; }
     .panel { border: 1px solid var(--line); background: var(--panel); padding: 18px; }
     .panel h2 { margin: 0 0 14px; font-size: 22px; letter-spacing: -.025em; }
     .list { display: grid; gap: 8px; }
@@ -498,7 +556,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
     .hint { color: var(--muted); font-size: 13px; margin-top: -4px; }
     .login { max-width: 420px; margin: 14vh auto 0; }
     .danger { border-color: #5c2b2b; color: #ffd3d3; }
-    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } .top { align-items: flex-start; flex-direction: column; } .row { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) { .grid, .settings-grid { grid-template-columns: 1fr; } .settings-grid .panel--wide { grid-column: auto; } .top { align-items: flex-start; flex-direction: column; } .row { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -524,6 +582,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
           <a class="<?= $tab === 'skills' ? 'is-active' : '' ?>" href="/admin/?tab=skills">Навыки</a>
           <a class="<?= $tab === 'projects' ? 'is-active' : '' ?>" href="/admin/?tab=projects">Портфолио</a>
           <a class="<?= $tab === 'about' ? 'is-active' : '' ?>" href="/admin/?tab=about">Обо мне</a>
+          <a class="<?= $tab === 'tags' ? 'is-active' : '' ?>" href="/admin/?tab=tags">Теги</a>
           <a class="<?= $tab === 'settings' ? 'is-active' : '' ?>" href="/admin/?tab=settings">Настройки</a>
           <a href="/" target="_blank" rel="noopener">Открыть сайт</a>
           <form method="post">
@@ -538,7 +597,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
       <?php if ($error): ?><div class="error"><?= h($error) ?></div><?php endif; ?>
 
       <?php if ($tab === 'settings'): ?>
-        <div class="grid">
+        <div class="settings-grid">
           <section class="panel">
             <h2>Общие</h2>
             <form method="post">
@@ -562,7 +621,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
             </form>
           </section>
 
-          <section class="panel">
+          <section class="panel panel--wide">
             <h2>Контакты</h2>
             <form method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
@@ -579,6 +638,18 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
           </section>
 
         </div>
+      <?php elseif ($tab === 'tags'): ?>
+        <section class="panel">
+          <h2>Теги</h2>
+          <form method="post">
+            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+            <input type="hidden" name="action" value="save_tags">
+            <label>Теги навыков, каждый с новой строки <textarea name="skill_tags"><?= h(implode("\n", $skillTags)) ?></textarea></label>
+            <label>Теги портфолио, каждый с новой строки <textarea name="project_tags"><?= h(implode("\n", $projectTags)) ?></textarea></label>
+            <label>Категории портфолио, формат: key | label <textarea name="project_categories"><?= h(categories_to_lines($projectCategories)) ?></textarea></label>
+            <button class="primary" type="submit">Сохранить теги</button>
+          </form>
+        </section>
       <?php elseif ($tab === 'about'): ?>
         <section class="panel">
           <h2>Обо мне</h2>
@@ -630,7 +701,19 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
               <label>ID <input name="id" value="<?= h($editProject['id'] ?? '') ?>" placeholder="auto-from-title"></label>
               <label>Название <input name="title" value="<?= h($editProject['title'] ?? '') ?>" required></label>
               <label>Дата <input name="date" type="date" value="<?= h($editProject['date'] ?? date('Y-m-d')) ?>"></label>
-              <label>Категория <input name="category" value="<?= h($editProject['category'] ?? '') ?>" placeholder="event"></label>
+              <label>Категория
+                <select name="category">
+                  <?php if (empty($projectCategories)): ?>
+                    <option value="">Сначала добавь категории во вкладке "Теги"</option>
+                  <?php endif; ?>
+                  <?php if (!empty($editProject['category']) && !isset($projectCategories[$editProject['category']])): ?>
+                    <option value="<?= h($editProject['category']) ?>" selected><?= h($editProject['category']) ?></option>
+                  <?php endif; ?>
+                  <?php foreach ($projectCategories as $key => $label): ?>
+                    <option value="<?= h($key) ?>" <?= ($editProject['category'] ?? '') === $key ? 'selected' : '' ?>><?= h($label) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
               <label>Название категории <input name="category_label" value="<?= h($editProject['category_label'] ?? '') ?>" placeholder="event tech"></label>
               <label>Краткое описание <textarea name="description" required><?= h($editProject['description'] ?? '') ?></textarea></label>
               <label>Полное описание <textarea name="full_description"><?= h($editProject['full_description'] ?? '') ?></textarea></label>
@@ -655,7 +738,14 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
               <?php endif; ?>
               <label>Дозагрузить картинки в галерею <input name="gallery_uploads[]" type="file" accept="image/*,.svg" multiple></label>
               <label>Видео, путь или URL <input name="video" value="<?= h($editProject['video'] ?? '') ?>"></label>
-              <label>Теги <textarea name="tags"><?= h(implode("\n", $editProject['tags'] ?? [])) ?></textarea></label>
+              <label>Теги из списка
+                <select name="tags_select[]" multiple size="7">
+                  <?php foreach ($projectTags as $tag): ?>
+                    <option value="<?= h($tag) ?>" <?= in_array($tag, $editProject['tags'] ?? [], true) ? 'selected' : '' ?>><?= h($tag) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+              <label>Дополнительные теги <textarea name="tags"><?= h(implode("\n", array_values(array_diff($editProject['tags'] ?? [], $projectTags)))) ?></textarea></label>
               <label>Инструменты <textarea name="tools"><?= h(implode("\n", $editProject['tools'] ?? [])) ?></textarea></label>
               <button class="primary" type="submit">Сохранить проект</button>
             </form>
@@ -702,7 +792,14 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
               <label>Загрузить иконку/картинку <input name="icon_upload" type="file" accept="image/*,.svg"></label>
               <label>Уровень / подпись <input name="level" value="<?= h($editSkill['level'] ?? '') ?>" placeholder="system admin"></label>
               <label>Категория <input name="category" value="<?= h($editSkill['category'] ?? '') ?>" placeholder="Системы"></label>
-              <label>Стек, через запятую или с новой строки <textarea name="stack"><?= h(implode("\n", $editSkill['stack'] ?? [])) ?></textarea></label>
+              <label>Теги навыка из списка
+                <select name="stack_select[]" multiple size="7">
+                  <?php foreach ($skillTags as $tag): ?>
+                    <option value="<?= h($tag) ?>" <?= in_array($tag, $editSkill['stack'] ?? [], true) ? 'selected' : '' ?>><?= h($tag) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </label>
+              <label>Дополнительные теги навыка <textarea name="stack"><?= h(implode("\n", array_values(array_diff($editSkill['stack'] ?? [], $skillTags)))) ?></textarea></label>
               <button class="primary" type="submit">Сохранить навык</button>
             </form>
           </section>

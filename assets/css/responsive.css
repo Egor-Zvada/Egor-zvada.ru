@@ -81,7 +81,7 @@
 
 /* v07 responsive additions */
 @media (max-width: 1060px) {
-  .tavrida__layout,
+  .tavrida__body,
   .contacts__layout {
     grid-template-columns: 1fr;
   }
@@ -101,7 +101,6 @@
   .tavrida__story,
   .contact-cta,
   .contact-qr { padding: 22px; }
-  .tavrida-visual { margin-top: 0; }
   .contact-item { grid-template-columns: 1fr; gap: 8px; }
   .contact-item__arrow { display: none; }
   .contact-qr__code { width: 180px; }
