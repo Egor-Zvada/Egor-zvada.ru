@@ -1,0 +1,7 @@
+<?php
+
+return [
+  // Change these values after the first deploy.
+  'username' => 'admin',
+  'password_sha256' => '41e5653fc7aeb894026d6bb7b2db7f65902b454945fa8fd65a6327047b5277fb',
+];
