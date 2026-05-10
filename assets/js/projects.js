@@ -23,6 +23,39 @@
     });
   };
 
+  const getGallery = (card) => {
+    try {
+      const gallery = JSON.parse(card.dataset.projectGallery || '[]');
+      return Array.isArray(gallery) ? gallery.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const setGalleryImage = (card, nextIndex) => {
+    const gallery = getGallery(card);
+    if (!gallery.length) return;
+
+    const normalizedIndex = (nextIndex + gallery.length) % gallery.length;
+    card.dataset.projectGalleryIndex = String(normalizedIndex);
+
+    const mainImage = card.querySelector('[data-project-main-image]');
+    if (mainImage) {
+      mainImage.src = gallery[normalizedIndex];
+    }
+
+    card.querySelectorAll('[data-project-gallery-item]').forEach((item) => {
+      const active = Number(item.dataset.galleryIndex) === normalizedIndex;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-current', active ? 'true' : 'false');
+    });
+  };
+
+  const stepGallery = (card, direction) => {
+    const currentIndex = Number(card.dataset.projectGalleryIndex || 0);
+    setGalleryImage(card, currentIndex + direction);
+  };
+
   const toggleCard = (card) => {
     const wasOpen = card.classList.contains('is-open');
     closeCards();
@@ -45,6 +78,30 @@
       const card = toggle.closest('[data-project-card]');
       if (!card) return;
       toggleCard(card);
+      return;
+    }
+
+    const galleryItem = event.target.closest('[data-project-gallery-item]');
+    if (galleryItem) {
+      const card = galleryItem.closest('[data-project-card]');
+      if (!card) return;
+      setGalleryImage(card, Number(galleryItem.dataset.galleryIndex || 0));
+      return;
+    }
+
+    const previousImage = event.target.closest('[data-project-prev]');
+    if (previousImage) {
+      const card = previousImage.closest('[data-project-card]');
+      if (!card) return;
+      stepGallery(card, -1);
+      return;
+    }
+
+    const nextImage = event.target.closest('[data-project-next]');
+    if (nextImage) {
+      const card = nextImage.closest('[data-project-card]');
+      if (!card) return;
+      stepGallery(card, 1);
       return;
     }
 

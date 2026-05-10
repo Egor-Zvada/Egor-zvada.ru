@@ -672,6 +672,42 @@
   transform: scale(1);
   filter: saturate(1) brightness(1) contrast(1);
 }
+.project-media__controls {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 4;
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+.project-card.is-open .project-media__controls,
+.project-card:hover .project-media__controls {
+  opacity: 1;
+  transform: translateY(0);
+}
+.project-media__control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--color-line-strong);
+  background: color-mix(in oklab, var(--color-bg) 78%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+  font: 16px/1 var(--font-mono);
+  backdrop-filter: blur(14px);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+.project-media__control:hover {
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-color: var(--color-text);
+  transform: translateY(-2px);
+}
 .project-media__label {
   position: absolute;
   left: 14px;
@@ -740,13 +776,30 @@
 .project-gallery {
   gap: 8px;
   margin-top: 22px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
 }
-.project-gallery img {
-  width: 31%;
-  min-width: 76px;
+.project-gallery__item {
+  flex: 0 0 clamp(92px, 31%, 150px);
+  padding: 0;
+  border: 1px solid var(--color-line-soft);
+  background: transparent;
+  cursor: pointer;
+  opacity: .72;
+  transition: opacity var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+.project-gallery__item:hover,
+.project-gallery__item.is-active {
+  opacity: 1;
+  border-color: var(--color-text);
+  transform: translateY(-2px);
+}
+.project-gallery__item img {
+  display: block;
+  width: 100%;
   aspect-ratio: 1.55;
   object-fit: cover;
-  border: 1px solid var(--color-line-soft);
   filter: saturate(1) brightness(.95) contrast(1.04);
 }
 .project-card__toggle {
