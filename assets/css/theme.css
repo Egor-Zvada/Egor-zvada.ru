@@ -3,8 +3,8 @@
   --font-main: "Inter", "Manrope", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
-  --color-bg: #121416;
-  --color-bg-elevated: #181b1d;
+  --color-bg: #0d0f10;
+  --color-bg-elevated: #131618;
   --color-surface: rgba(255,255,255,.045);
   --color-surface-strong: rgba(255,255,255,.075);
   --color-text: #f4f4f1;
@@ -16,8 +16,8 @@
   --color-line-soft: rgba(244,244,241,.08);
   --color-grid: rgba(244,244,241,.085);
   --color-scanline: rgba(255,255,255,.04);
-  --color-glow-soft: rgba(160,168,170,.14);
-  --color-glow-faint: rgba(160,168,170,.075);
+  --color-glow-soft: rgba(160,168,170,.105);
+  --color-glow-faint: rgba(160,168,170,.058);
   --color-accent: #ffffff;
   --color-danger: #f4f4f1;
 
@@ -29,8 +29,8 @@
   --transition-fast: 180ms cubic-bezier(.22, 1, .36, 1);
   --transition: 420ms cubic-bezier(.22, 1, .36, 1);
   --transition-slow: 820ms cubic-bezier(.22, 1, .36, 1);
-  --grid-opacity: .62;
-  --scanline-opacity: .48;
+  --grid-opacity: .58;
+  --scanline-opacity: .44;
   --scanline-blend: screen;
   --asset-filter: invert(1);
 }
@@ -86,8 +86,8 @@
 }
 
 :root[data-theme="dark"] {
-  --color-bg: #121416;
-  --color-bg-elevated: #181b1d;
+  --color-bg: #0d0f10;
+  --color-bg-elevated: #131618;
   --color-surface: rgba(255,255,255,.045);
   --color-surface-strong: rgba(255,255,255,.075);
   --color-text: #f4f4f1;
@@ -99,12 +99,12 @@
   --color-line-soft: rgba(244,244,241,.08);
   --color-grid: rgba(244,244,241,.085);
   --color-scanline: rgba(255,255,255,.04);
-  --color-glow-soft: rgba(160,168,170,.14);
-  --color-glow-faint: rgba(160,168,170,.075);
+  --color-glow-soft: rgba(160,168,170,.105);
+  --color-glow-faint: rgba(160,168,170,.058);
   --shadow-soft: 0 22px 90px rgba(0,0,0,.44);
   --shadow-inner: inset 0 1px 0 rgba(255,255,255,.05);
-  --grid-opacity: .62;
-  --scanline-opacity: .48;
+  --grid-opacity: .58;
+  --scanline-opacity: .44;
   --scanline-blend: screen;
   --asset-filter: invert(1);
 }

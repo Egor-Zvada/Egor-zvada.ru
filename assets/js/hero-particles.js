@@ -33,9 +33,7 @@
     let aspect = 1;
     let frame = null;
     let visible = true;
-    let lineMesh = null;
     let pointMesh = null;
-    let lineMeta = [];
     let pointMeta = [];
     let lastScrollY = window.scrollY;
     let scrollVelocity = 0;
@@ -51,9 +49,9 @@
 
     const qualityPreset = () => {
       const level = M.motionLevel();
-      if (level === 'low') return { strands: 74, segments: 68, dpr: 1, speed: 0.78 };
-      if (level === 'medium') return { strands: 112, segments: 82, dpr: 1.35, speed: 0.9 };
-      return { strands: 156, segments: 96, dpr: 1.75, speed: 1 };
+      if (level === 'low') return { particles: 1200, dpr: 1, speed: 0.78 };
+      if (level === 'medium') return { particles: 2400, dpr: 1.35, speed: 0.9 };
+      return { particles: 4200, dpr: 1.75, speed: 1 };
     };
 
     const themeColor = () => M.isLightTheme() ? 0x090909 : 0xf4f4f1;
@@ -65,32 +63,22 @@
       scrollVelocity = M.lerp(scrollVelocity, M.clamp(diff, -80, 80), 0.08);
     }
 
-    function makeMeta(strands, segments) {
-      const lines = [];
+    function makeMeta(count) {
       const points = [];
-      for (let strand = 0; strand < strands; strand += 1) {
-        const family = strand % 5;
-        const band = Math.pow((strand / Math.max(1, strands - 1)) * 2 - 1, 1);
+      for (let index = 0; index < count; index += 1) {
+        const family = index % 7;
+        const band = Math.random() * 2 - 1;
         const seed = Math.random() * 1000;
         const phase = seed * 0.017;
-        const amplitude = 0.025 + Math.random() * 0.095;
-        const flow = 0.42 + Math.random() * 1.45;
-        const lane = band * (0.22 + Math.random() * 0.88);
-        const segmentStep = family === 4 ? 2 : 1;
-
-        for (let segment = 0; segment < segments - segmentStep; segment += segmentStep) {
-          const a = segment / (segments - 1);
-          const b = (segment + segmentStep) / (segments - 1);
-          lines.push({ u: a, band, lane, family, phase, amplitude, flow, seed, strand });
-          lines.push({ u: b, band, lane, family, phase, amplitude, flow, seed, strand });
-
-          if (segment % 9 === 0 && Math.random() > 0.28) {
-            points.push({ u: a, band, lane, family, phase, amplitude, flow, seed, strand });
-          }
-        }
+        const amplitude = 0.018 + Math.random() * 0.12;
+        const flow = 0.42 + Math.random() * 1.65;
+        const lane = band * (0.16 + Math.random() * 0.94);
+        const size = 0.45 + Math.random() * 1.8;
+        const depth = Math.random();
+        points.push({ u: Math.random(), band, lane, family, phase, amplitude, flow, seed, size, depth });
       }
 
-      return { lines, points };
+      return points;
     }
 
     function sample(meta, time) {
@@ -134,7 +122,7 @@
         warpedY += (dy / dist) * force * force * 0.25 * pointer.strength + Math.cos(dist * 18 - time * 3.4) * force * 0.05 * pointer.strength;
       }
 
-      return { x: warpedX, y: warpedY, z: fold * 0.14 };
+      return { x: warpedX, y: warpedY, z: fold * 0.14 + (meta.depth - 0.5) * 0.08 };
     }
 
     function rebuild() {
@@ -154,42 +142,24 @@
       camera.bottom = -1;
       camera.updateProjectionMatrix();
 
-      if (lineMesh) {
-        lineMesh.geometry.dispose();
-        lineMesh.material.dispose();
-        scene.remove(lineMesh);
-      }
       if (pointMesh) {
         pointMesh.geometry.dispose();
         pointMesh.material.dispose();
         scene.remove(pointMesh);
       }
 
-      const meta = makeMeta(preset.strands, preset.segments);
-      lineMeta = meta.lines;
-      pointMeta = meta.points;
-
-      const lineGeometry = new THREE.BufferGeometry();
-      lineGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lineMeta.length * 3), 3));
-      const lineMaterial = new THREE.LineBasicMaterial({
-        color: themeColor(),
-        transparent: true,
-        opacity: M.isLightTheme() ? 0.16 : 0.31,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      });
-      lineMesh = new THREE.LineSegments(lineGeometry, lineMaterial);
-      scene.add(lineMesh);
+      pointMeta = makeMeta(preset.particles);
 
       const pointGeometry = new THREE.BufferGeometry();
       pointGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pointMeta.length * 3), 3));
       const pointMaterial = new THREE.PointsMaterial({
         color: themeColor(),
         transparent: true,
-        opacity: M.isLightTheme() ? 0.20 : 0.42,
-        size: width < 760 ? 0.007 : 0.0055,
+        opacity: M.isLightTheme() ? 0.24 : 0.58,
+        size: width < 760 ? 0.009 : 0.0068,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
+        sizeAttenuation: false,
       });
       pointMesh = new THREE.Points(pointGeometry, pointMaterial);
       scene.add(pointMesh);
@@ -200,23 +170,13 @@
       pointer.y = M.lerp(pointer.y, pointer.ty, 0.11);
       pointer.strength = M.lerp(pointer.strength, pointer.active ? 1 : 0, 0.055);
 
-      const linePositions = lineMesh.geometry.attributes.position.array;
-      for (let i = 0; i < lineMeta.length; i += 1) {
-        const p = sample(lineMeta[i], time);
-        const offset = i * 3;
-        linePositions[offset] = p.x;
-        linePositions[offset + 1] = p.y;
-        linePositions[offset + 2] = p.z;
-      }
-      lineMesh.geometry.attributes.position.needsUpdate = true;
-
       const pointPositions = pointMesh.geometry.attributes.position.array;
       for (let i = 0; i < pointMeta.length; i += 1) {
-        const p = sample(pointMeta[i], time + 0.07);
+        const p = sample(pointMeta[i], time);
         const offset = i * 3;
         pointPositions[offset] = p.x;
         pointPositions[offset + 1] = p.y;
-        pointPositions[offset + 2] = p.z + 0.01;
+        pointPositions[offset + 2] = p.z;
       }
       pointMesh.geometry.attributes.position.needsUpdate = true;
     }
@@ -231,7 +191,6 @@
       const preset = qualityPreset();
       const time = clock.getElapsedTime() * preset.speed;
       const color = themeColor();
-      lineMesh.material.color.setHex(color);
       pointMesh.material.color.setHex(color);
       updateGeometry(time);
       renderer.render(scene, camera);
