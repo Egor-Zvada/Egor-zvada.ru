@@ -603,10 +603,13 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
     .check { display: flex; align-items: center; gap: 9px; }
     .message { margin-bottom: 14px; padding: 12px 14px; border: 1px solid var(--success-line); background: var(--success-bg); color: var(--success-text); }
     .error { margin-bottom: 14px; padding: 12px 14px; border: 1px solid var(--error-line); background: var(--error-bg); color: var(--error-text); }
+    .ajax-status { margin-bottom: 14px; padding: 12px 14px; border: 1px solid var(--line); background: var(--soft); color: var(--muted); }
     .hint { color: var(--muted); font-size: 13px; margin-top: -4px; }
     .login { max-width: 420px; margin: 14vh auto 0; }
     .danger { border-color: var(--danger-line); color: var(--danger-text); }
     .admin-theme-toggle { text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
+    .admin.is-busy { cursor: progress; }
+    .admin.is-busy button, .admin.is-busy .button { cursor: progress; }
     .tag-manager { display: grid; gap: 12px; }
     .tag-manager__add { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
     .tag-cloud, .tag-picker { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; border: 1px solid var(--line); background: var(--field); }
@@ -966,38 +969,31 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
         return chip;
       };
 
-      document.querySelectorAll('[data-tag-manager]').forEach((manager) => {
-        const input = manager.querySelector('[data-tag-input]');
-        const addButton = manager.querySelector('[data-tag-add]');
+      const addTagFromManager = (manager) => {
+        const input = manager?.querySelector('[data-tag-input]');
         const cloud = manager.querySelector('[data-tag-cloud]');
         const inputName = manager.dataset.inputName || 'tags[]';
+        const value = (input?.value || '').trim();
+        if (!value || !cloud) return;
 
-        const addTag = () => {
-          const value = (input?.value || '').trim();
-          if (!value || !cloud) return;
-
-          const exists = [...cloud.querySelectorAll('input[type="hidden"]')]
-            .some((field) => field.value.toLowerCase() === value.toLowerCase());
-          if (exists) {
-            input.value = '';
-            return;
-          }
-
-          cloud.append(createChip(inputName, value));
+        const exists = [...cloud.querySelectorAll('input[type="hidden"]')]
+          .some((field) => field.value.toLowerCase() === value.toLowerCase());
+        if (exists) {
           input.value = '';
-          input.focus();
-        };
+          return;
+        }
 
-        addButton?.addEventListener('click', addTag);
-        input?.addEventListener('keydown', (event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            addTag();
-          }
-        });
-      });
+        cloud.append(createChip(inputName, value));
+        input.value = '';
+        input.focus();
+      };
 
       document.addEventListener('click', (event) => {
+        const addTag = event.target.closest('[data-tag-add]');
+        if (addTag) {
+          addTagFromManager(addTag.closest('[data-tag-manager]'));
+        }
+
         const removeTag = event.target.closest('[data-tag-remove]');
         if (removeTag) {
           removeTag.closest('[data-tag-chip]')?.remove();
@@ -1020,11 +1016,77 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
           row.querySelector('input')?.focus();
         }
       });
+
+      document.addEventListener('keydown', (event) => {
+        const input = event.target.closest('[data-tag-input]');
+        if (input && event.key === 'Enter') {
+          event.preventDefault();
+          addTagFromManager(input.closest('[data-tag-manager]'));
+        }
+      });
+    })();
+
+    (() => {
+      const parser = new DOMParser();
+
+      const setStatus = (admin, text, type = 'message') => {
+        admin.querySelector('[data-ajax-status]')?.remove();
+        const status = document.createElement('div');
+        status.className = type === 'error' ? 'error' : 'ajax-status';
+        status.dataset.ajaxStatus = '';
+        status.textContent = text;
+        admin.prepend(status);
+      };
+
+      const replaceAdmin = (html, url) => {
+        const nextDoc = parser.parseFromString(html, 'text/html');
+        const nextAdmin = nextDoc.querySelector('.admin');
+        const currentAdmin = document.querySelector('.admin');
+        if (!nextAdmin || !currentAdmin) {
+          window.location.href = url || window.location.href;
+          return;
+        }
+
+        currentAdmin.innerHTML = nextAdmin.innerHTML;
+        currentAdmin.classList.remove('is-busy');
+        if (url) window.history.replaceState(null, '', url);
+        document.dispatchEvent(new CustomEvent('admin:content-updated'));
+      };
+
+      document.addEventListener('submit', async (event) => {
+        const form = event.target.closest('form');
+        if (!form || form.method.toLowerCase() !== 'post' || event.defaultPrevented) return;
+
+        event.preventDefault();
+        const admin = document.querySelector('.admin');
+        if (!admin) return;
+
+        admin.classList.add('is-busy');
+        setStatus(admin, 'Сохраняю...');
+
+        try {
+          const response = await fetch(form.action || window.location.href, {
+            method: 'POST',
+            body: new FormData(form),
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'fetch' },
+          });
+
+          const html = await response.text();
+          if (!response.ok) {
+            throw new Error(html || 'Не получилось сохранить.');
+          }
+
+          replaceAdmin(html, response.url);
+        } catch (error) {
+          admin.classList.remove('is-busy');
+          setStatus(admin, error.message || 'Не получилось сохранить.', 'error');
+        }
+      });
     })();
 
     (() => {
       const root = document.documentElement;
-      const toggles = [...document.querySelectorAll('[data-admin-theme-toggle]')];
       const storageKey = 'egor-zvada-admin-theme';
       const modeStorageKey = 'egor-zvada-admin-theme-mode';
       const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
@@ -1071,7 +1133,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
         }
 
         const nextTheme = theme === 'light' ? 'dark' : 'light';
-        toggles.forEach((toggle) => {
+        document.querySelectorAll('[data-admin-theme-toggle]').forEach((toggle) => {
           toggle.textContent = nextTheme;
           toggle.setAttribute('aria-label', nextTheme === 'dark' ? 'Включить тёмную тему' : 'Включить светлую тему');
         });
@@ -1084,12 +1146,15 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
 
       applyTheme(getInitialTheme());
 
-      toggles.forEach((toggle) => {
-        toggle.addEventListener('click', () => {
+      document.addEventListener('click', (event) => {
+        const toggle = event.target.closest('[data-admin-theme-toggle]');
+        if (toggle) {
           const nextTheme = root.dataset.theme === 'light' ? 'dark' : 'light';
           applyTheme(nextTheme, true);
-        });
+        }
       });
+
+      document.addEventListener('admin:content-updated', () => applyTheme(root.dataset.theme || getInitialTheme()));
 
       if (typeof mediaQuery.addEventListener === 'function') {
         mediaQuery.addEventListener('change', syncWithSystemTheme);
