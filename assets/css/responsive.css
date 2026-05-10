@@ -101,6 +101,7 @@
   .tavrida__story,
   .contact-cta,
   .contact-qr { padding: 22px; }
+  .tavrida-visual { margin-top: 0; }
   .contact-item { grid-template-columns: 1fr; gap: 8px; }
   .contact-item__arrow { display: none; }
   .contact-qr__code { width: 180px; }
