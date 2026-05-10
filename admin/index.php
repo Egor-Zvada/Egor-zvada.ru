@@ -176,6 +176,27 @@ function categories_to_lines(array $categories): string {
   return implode("\n", $lines);
 }
 
+function list_from_mixed($value): array {
+  return is_array($value) ? list_from_array($value) : list_from_lines((string) $value);
+}
+
+function categories_from_post($keys, $labels): array {
+  $keys = is_array($keys) ? array_values($keys) : [];
+  $labels = is_array($labels) ? array_values($labels) : [];
+  $categories = [];
+
+  foreach ($keys as $index => $rawKey) {
+    $key = trim((string) $rawKey);
+    if ($key === '') {
+      continue;
+    }
+    $label = trim((string) ($labels[$index] ?? $key));
+    $categories[$key] = $label !== '' ? $label : $key;
+  }
+
+  return $categories;
+}
+
 function slugify(string $value): string {
   $value = function_exists('mb_strtolower')
     ? mb_strtolower(trim($value), 'UTF-8')
@@ -508,9 +529,9 @@ try {
       check_csrf();
 
       $tags = [
-        'skill_tags' => list_from_lines((string) ($_POST['skill_tags'] ?? '')),
-        'project_tags' => list_from_lines((string) ($_POST['project_tags'] ?? '')),
-        'project_categories' => categories_from_lines((string) ($_POST['project_categories'] ?? '')),
+        'skill_tags' => list_from_mixed($_POST['skill_tags'] ?? []),
+        'project_tags' => list_from_mixed($_POST['project_tags'] ?? []),
+        'project_categories' => categories_from_post($_POST['project_category_keys'] ?? [], $_POST['project_category_labels'] ?? []),
       ];
       save_assoc($GLOBALS['tagsFile'], $tags);
       redirect_admin('tags', 'Теги сохранены.');
@@ -561,6 +582,8 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
     .settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: stretch; }
     .settings-grid .panel { height: 100%; }
     .settings-grid .panel--wide { grid-column: 1 / -1; }
+    .tags-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+    .tags-grid .panel--wide { grid-column: 1 / -1; }
     .panel { border: 1px solid var(--line); background: var(--panel); padding: 18px; }
     .panel h2 { margin: 0 0 14px; font-size: 22px; letter-spacing: -.025em; }
     .list { display: grid; gap: 8px; }
@@ -584,7 +607,34 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
     .login { max-width: 420px; margin: 14vh auto 0; }
     .danger { border-color: var(--danger-line); color: var(--danger-text); }
     .admin-theme-toggle { text-transform: uppercase; letter-spacing: .08em; font-size: 12px; }
-    @media (max-width: 860px) { .grid, .settings-grid { grid-template-columns: 1fr; } .settings-grid .panel--wide { grid-column: auto; } .top { align-items: flex-start; flex-direction: column; } .row { grid-template-columns: 1fr; } }
+    .tag-manager { display: grid; gap: 12px; }
+    .tag-manager__add { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .tag-cloud, .tag-picker { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; border: 1px solid var(--line); background: var(--field); }
+    .tag-chip { min-height: 34px; display: inline-flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--line); background: var(--soft); color: var(--text); font-size: 13px; }
+    .tag-chip button { min-height: 24px; width: 24px; padding: 0; border-color: transparent; background: transparent; color: var(--muted); }
+    .tag-chip button:hover { color: var(--text); border-color: var(--line); }
+    .tag-option { position: relative; display: inline-flex; align-items: center; margin: 0; cursor: pointer; }
+    .tag-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .tag-option span { min-height: 34px; display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid var(--line); background: var(--soft); color: var(--muted); }
+    .tag-option input:checked + span { background: var(--text); color: var(--bg); border-color: var(--text); }
+    .category-list { display: grid; gap: 8px; }
+    .category-row { display: grid; grid-template-columns: minmax(120px, .7fr) minmax(140px, 1fr) auto; gap: 8px; align-items: center; }
+    @media (max-width: 860px) {
+      .admin { width: min(100% - 20px, 1180px); padding-top: 16px; }
+      .grid, .settings-grid, .tags-grid { grid-template-columns: 1fr; }
+      .settings-grid .panel--wide, .tags-grid .panel--wide { grid-column: auto; }
+      .top { align-items: stretch; flex-direction: column; }
+      .brand { font-size: 22px; }
+      .nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .nav a, .nav button, .nav form, .nav form button { width: 100%; }
+      .row { grid-template-columns: 1fr; }
+      .actions { display: grid; grid-template-columns: 1fr; }
+      .actions .button, .actions button { width: 100%; }
+      .file-list__item { grid-template-columns: 44px 1fr; }
+      .file-list__item .check { grid-column: 1 / -1; }
+      .tag-manager__add, .category-row { grid-template-columns: 1fr; }
+      .panel { padding: 14px; }
+    }
   </style>
 </head>
 <body>
@@ -669,17 +719,66 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
 
         </div>
       <?php elseif ($tab === 'tags'): ?>
-        <section class="panel">
-          <h2>Теги</h2>
-          <form method="post">
-            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
-            <input type="hidden" name="action" value="save_tags">
-            <label>Теги навыков, каждый с новой строки <textarea name="skill_tags"><?= h(implode("\n", $skillTags)) ?></textarea></label>
-            <label>Теги портфолио, каждый с новой строки <textarea name="project_tags"><?= h(implode("\n", $projectTags)) ?></textarea></label>
-            <label>Категории портфолио, формат: key | label <textarea name="project_categories"><?= h(categories_to_lines($projectCategories)) ?></textarea></label>
+        <form method="post" class="tags-grid">
+          <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+          <input type="hidden" name="action" value="save_tags">
+
+          <section class="panel">
+            <h2>Теги навыков</h2>
+            <div class="tag-manager" data-tag-manager data-input-name="skill_tags[]">
+              <div class="tag-manager__add">
+                <input data-tag-input placeholder="Например: TouchDesigner">
+                <button type="button" data-tag-add>Добавить</button>
+              </div>
+              <div class="tag-cloud" data-tag-cloud>
+                <?php foreach ($skillTags as $tag): ?>
+                  <span class="tag-chip" data-tag-chip>
+                    <span><?= h($tag) ?></span>
+                    <input type="hidden" name="skill_tags[]" value="<?= h($tag) ?>">
+                    <button type="button" data-tag-remove aria-label="Удалить тег <?= h($tag) ?>">×</button>
+                  </span>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h2>Теги портфолио</h2>
+            <div class="tag-manager" data-tag-manager data-input-name="project_tags[]">
+              <div class="tag-manager__add">
+                <input data-tag-input placeholder="Например: broadcast">
+                <button type="button" data-tag-add>Добавить</button>
+              </div>
+              <div class="tag-cloud" data-tag-cloud>
+                <?php foreach ($projectTags as $tag): ?>
+                  <span class="tag-chip" data-tag-chip>
+                    <span><?= h($tag) ?></span>
+                    <input type="hidden" name="project_tags[]" value="<?= h($tag) ?>">
+                    <button type="button" data-tag-remove aria-label="Удалить тег <?= h($tag) ?>">×</button>
+                  </span>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel panel--wide">
+            <h2>Категории портфолио</h2>
+            <div class="category-list" data-category-list>
+              <?php foreach ($projectCategories as $key => $label): ?>
+                <div class="category-row">
+                  <input name="project_category_keys[]" value="<?= h($key) ?>" placeholder="key">
+                  <input name="project_category_labels[]" value="<?= h($label) ?>" placeholder="label">
+                  <button type="button" data-category-remove>Удалить</button>
+                </div>
+              <?php endforeach; ?>
+            </div>
+            <button type="button" data-category-add>Добавить категорию</button>
+          </section>
+
+          <section class="panel panel--wide">
             <button class="primary" type="submit">Сохранить теги</button>
-          </form>
-        </section>
+          </section>
+        </form>
       <?php elseif ($tab === 'about'): ?>
         <section class="panel">
           <h2>Обо мне</h2>
@@ -768,13 +867,15 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               <?php endif; ?>
               <label>Дозагрузить картинки в галерею <input name="gallery_uploads[]" type="file" accept="image/*,.svg" multiple></label>
               <label>Видео, путь или URL <input name="video" value="<?= h($editProject['video'] ?? '') ?>"></label>
-              <label>Теги из списка
-                <select name="tags_select[]" multiple size="7">
+              <label>Теги из списка</label>
+              <div class="tag-picker" aria-label="Теги проекта">
                   <?php foreach ($projectTags as $tag): ?>
-                    <option value="<?= h($tag) ?>" <?= in_array($tag, $editProject['tags'] ?? [], true) ? 'selected' : '' ?>><?= h($tag) ?></option>
+                    <label class="tag-option">
+                      <input name="tags_select[]" type="checkbox" value="<?= h($tag) ?>" <?= in_array($tag, $editProject['tags'] ?? [], true) ? 'checked' : '' ?>>
+                      <span><?= h($tag) ?></span>
+                    </label>
                   <?php endforeach; ?>
-                </select>
-              </label>
+              </div>
               <label>Дополнительные теги <textarea name="tags"><?= h(implode("\n", array_values(array_diff($editProject['tags'] ?? [], $projectTags)))) ?></textarea></label>
               <label>Инструменты <textarea name="tools"><?= h(implode("\n", $editProject['tools'] ?? [])) ?></textarea></label>
               <button class="primary" type="submit">Сохранить проект</button>
@@ -823,13 +924,15 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               <label class="check"><input name="invert_icon" type="checkbox" value="1" <?= $editSkillInvertIcon ? 'checked' : '' ?>> Инвертировать иконку под светлую/тёмную тему</label>
               <label>Уровень / подпись <input name="level" value="<?= h($editSkill['level'] ?? '') ?>" placeholder="system admin"></label>
               <label>Категория <input name="category" value="<?= h($editSkill['category'] ?? '') ?>" placeholder="Системы"></label>
-              <label>Теги навыка из списка
-                <select name="stack_select[]" multiple size="7">
+              <label>Теги навыка из списка</label>
+              <div class="tag-picker" aria-label="Теги навыка">
                   <?php foreach ($skillTags as $tag): ?>
-                    <option value="<?= h($tag) ?>" <?= in_array($tag, $editSkill['stack'] ?? [], true) ? 'selected' : '' ?>><?= h($tag) ?></option>
+                    <label class="tag-option">
+                      <input name="stack_select[]" type="checkbox" value="<?= h($tag) ?>" <?= in_array($tag, $editSkill['stack'] ?? [], true) ? 'checked' : '' ?>>
+                      <span><?= h($tag) ?></span>
+                    </label>
                   <?php endforeach; ?>
-                </select>
-              </label>
+              </div>
               <label>Дополнительные теги навыка <textarea name="stack"><?= h(implode("\n", array_values(array_diff($editSkill['stack'] ?? [], $skillTags)))) ?></textarea></label>
               <button class="primary" type="submit">Сохранить навык</button>
             </form>
@@ -839,6 +942,86 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
     <?php endif; ?>
   </main>
   <script>
+    (() => {
+      const createChip = (name, value) => {
+        const chip = document.createElement('span');
+        chip.className = 'tag-chip';
+        chip.dataset.tagChip = '';
+
+        const label = document.createElement('span');
+        label.textContent = value;
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.tagRemove = '';
+        button.setAttribute('aria-label', `Удалить тег ${value}`);
+        button.textContent = '×';
+
+        chip.append(label, input, button);
+        return chip;
+      };
+
+      document.querySelectorAll('[data-tag-manager]').forEach((manager) => {
+        const input = manager.querySelector('[data-tag-input]');
+        const addButton = manager.querySelector('[data-tag-add]');
+        const cloud = manager.querySelector('[data-tag-cloud]');
+        const inputName = manager.dataset.inputName || 'tags[]';
+
+        const addTag = () => {
+          const value = (input?.value || '').trim();
+          if (!value || !cloud) return;
+
+          const exists = [...cloud.querySelectorAll('input[type="hidden"]')]
+            .some((field) => field.value.toLowerCase() === value.toLowerCase());
+          if (exists) {
+            input.value = '';
+            return;
+          }
+
+          cloud.append(createChip(inputName, value));
+          input.value = '';
+          input.focus();
+        };
+
+        addButton?.addEventListener('click', addTag);
+        input?.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            addTag();
+          }
+        });
+      });
+
+      document.addEventListener('click', (event) => {
+        const removeTag = event.target.closest('[data-tag-remove]');
+        if (removeTag) {
+          removeTag.closest('[data-tag-chip]')?.remove();
+        }
+
+        const removeCategory = event.target.closest('[data-category-remove]');
+        if (removeCategory) {
+          removeCategory.closest('.category-row')?.remove();
+        }
+
+        const addCategory = event.target.closest('[data-category-add]');
+        if (addCategory) {
+          const list = document.querySelector('[data-category-list]');
+          if (!list) return;
+
+          const row = document.createElement('div');
+          row.className = 'category-row';
+          row.innerHTML = '<input name="project_category_keys[]" placeholder="key"><input name="project_category_labels[]" placeholder="label"><button type="button" data-category-remove>Удалить</button>';
+          list.append(row);
+          row.querySelector('input')?.focus();
+        }
+      });
+    })();
+
     (() => {
       const root = document.documentElement;
       const toggles = [...document.querySelectorAll('[data-admin-theme-toggle]')];
