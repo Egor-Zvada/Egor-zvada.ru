@@ -463,7 +463,7 @@ try {
       check_csrf();
 
       $settings = load_assoc($GLOBALS['settingsFile']);
-      $settings['version'] = trim((string) ($_POST['version'] ?? '')) ?: '0.2-beta';
+      $settings['version'] = trim((string) ($_POST['version'] ?? '')) ?: '0.3-beta';
       $settings['admin_clicks'] = max(1, (int) ($_POST['admin_clicks'] ?? 10));
       save_assoc($GLOBALS['settingsFile'], $settings);
       redirect_admin('settings', 'Общие настройки сохранены.');
@@ -686,7 +686,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
             <form method="post">
               <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
               <input type="hidden" name="action" value="save_general_settings">
-              <label>Версия в футере <input name="version" value="<?= h($settings['version'] ?? '0.2-beta') ?>" required></label>
+              <label>Версия в футере <input name="version" value="<?= h($settings['version'] ?? '0.3-beta') ?>" required></label>
               <label>Кликов для скрытого входа <input name="admin_clicks" type="number" min="1" max="50" value="<?= h($settings['admin_clicks'] ?? 10) ?>" required></label>
               <button class="primary" type="submit">Сохранить общие</button>
             </form>

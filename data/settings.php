@@ -1,6 +1,6 @@
 <?php
 
 return [
-  'version' => '0.2-beta',
+  'version' => '0.3-beta',
   'admin_clicks' => 10,
 ];

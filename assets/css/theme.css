@@ -3,10 +3,10 @@
   --font-main: "Inter", "Manrope", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
-  --color-bg: #050505;
-  --color-bg-elevated: #090909;
-  --color-surface: rgba(255,255,255,.035);
-  --color-surface-strong: rgba(255,255,255,.065);
+  --color-bg: #0b0c0d;
+  --color-bg-elevated: #111315;
+  --color-surface: rgba(255,255,255,.045);
+  --color-surface-strong: rgba(255,255,255,.075);
   --color-text: #f4f4f1;
   --color-text-soft: rgba(244,244,241,.78);
   --color-muted: rgba(244,244,241,.56);
@@ -14,10 +14,10 @@
   --color-line: rgba(244,244,241,.14);
   --color-line-strong: rgba(244,244,241,.38);
   --color-line-soft: rgba(244,244,241,.08);
-  --color-grid: rgba(244,244,241,.08);
-  --color-scanline: rgba(255,255,255,.035);
-  --color-glow-soft: rgba(255,255,255,.08);
-  --color-glow-faint: rgba(255,255,255,.045);
+  --color-grid: rgba(244,244,241,.07);
+  --color-scanline: rgba(255,255,255,.03);
+  --color-glow-soft: rgba(160,168,170,.10);
+  --color-glow-faint: rgba(160,168,170,.055);
   --color-accent: #ffffff;
   --color-danger: #f4f4f1;
 
@@ -86,10 +86,10 @@
 }
 
 :root[data-theme="dark"] {
-  --color-bg: #050505;
-  --color-bg-elevated: #090909;
-  --color-surface: rgba(255,255,255,.035);
-  --color-surface-strong: rgba(255,255,255,.065);
+  --color-bg: #0b0c0d;
+  --color-bg-elevated: #111315;
+  --color-surface: rgba(255,255,255,.045);
+  --color-surface-strong: rgba(255,255,255,.075);
   --color-text: #f4f4f1;
   --color-text-soft: rgba(244,244,241,.78);
   --color-muted: rgba(244,244,241,.56);
@@ -97,10 +97,10 @@
   --color-line: rgba(244,244,241,.14);
   --color-line-strong: rgba(244,244,241,.38);
   --color-line-soft: rgba(244,244,241,.08);
-  --color-grid: rgba(244,244,241,.08);
-  --color-scanline: rgba(255,255,255,.035);
-  --color-glow-soft: rgba(255,255,255,.08);
-  --color-glow-faint: rgba(255,255,255,.045);
+  --color-grid: rgba(244,244,241,.07);
+  --color-scanline: rgba(255,255,255,.03);
+  --color-glow-soft: rgba(160,168,170,.10);
+  --color-glow-faint: rgba(160,168,170,.055);
   --shadow-soft: 0 22px 90px rgba(0,0,0,.44);
   --shadow-inner: inset 0 1px 0 rgba(255,255,255,.05);
   --grid-opacity: .54;
