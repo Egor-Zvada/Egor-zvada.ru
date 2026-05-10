@@ -276,10 +276,10 @@ try {
         'description' => trim((string) ($_POST['description'] ?? '')),
         'icon' => $icon,
         'default_icon' => $defaultIcon,
+        'order' => max(1, (int) ($_POST['order'] ?? ($old['order'] ?? count($skills) + 1))),
         'level' => trim((string) ($_POST['level'] ?? '')),
         'category' => trim((string) ($_POST['category'] ?? '')),
         'stack' => list_from_text((string) ($_POST['stack'] ?? '')),
-        'is_hidden' => !empty($_POST['is_hidden']),
       ];
 
       if ($item['title'] === '') {
@@ -346,7 +346,6 @@ try {
         'video' => trim((string) ($_POST['video'] ?? '')) ?: null,
         'tags' => list_from_text((string) ($_POST['tags'] ?? '')),
         'tools' => list_from_text((string) ($_POST['tools'] ?? '')),
-        'is_hidden' => !empty($_POST['is_hidden']),
       ];
 
       if ($item['title'] === '') {
@@ -605,7 +604,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
                 <div class="row">
                   <div>
                     <strong><?= h($project['title'] ?? '') ?></strong>
-                    <span><?= h($project['category_label'] ?? $project['category'] ?? '') ?> · <?= h($project['date'] ?? '') ?><?= !empty($project['is_hidden']) ? ' · скрыт' : '' ?></span>
+                    <span><?= h($project['category_label'] ?? $project['category'] ?? '') ?> · <?= h($project['date'] ?? '') ?></span>
                   </div>
                   <div class="actions">
                     <a class="button" href="/admin/?tab=projects&edit_project=<?= $index ?>">Редактировать</a>
@@ -623,6 +622,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
 
           <section class="panel">
             <h2><?= $editProject ? 'Редактировать проект' : 'Добавить проект' ?></h2>
+            <p class="hint">На сайте автоматически видны 4 самых свежих проекта по дате. Остальные уходят под кнопку "Показать ещё".</p>
             <form method="post" enctype="multipart/form-data">
               <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
               <input type="hidden" name="action" value="save_project">
@@ -657,7 +657,6 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
               <label>Видео, путь или URL <input name="video" value="<?= h($editProject['video'] ?? '') ?>"></label>
               <label>Теги <textarea name="tags"><?= h(implode("\n", $editProject['tags'] ?? [])) ?></textarea></label>
               <label>Инструменты <textarea name="tools"><?= h(implode("\n", $editProject['tools'] ?? [])) ?></textarea></label>
-              <label class="check"><input name="is_hidden" type="checkbox" value="1" <?= !empty($editProject['is_hidden']) ? 'checked' : '' ?>> Скрыть на сайте до кнопки "Показать ещё"</label>
               <button class="primary" type="submit">Сохранить проект</button>
             </form>
           </section>
@@ -671,7 +670,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
                 <div class="row">
                   <div>
                     <strong><?= h($skill['title'] ?? '') ?></strong>
-                    <span><?= h($skill['category'] ?? '') ?> · <?= h($skill['level'] ?? '') ?><?= !empty($skill['is_hidden']) ? ' · скрыт' : '' ?></span>
+                    <span>№<?= h($skill['order'] ?? $index + 1) ?> · <?= h($skill['category'] ?? '') ?> · <?= h($skill['level'] ?? '') ?></span>
                   </div>
                   <div class="actions">
                     <a class="button" href="/admin/?tab=skills&edit_skill=<?= $index ?>">Редактировать</a>
@@ -694,6 +693,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
               <input type="hidden" name="action" value="save_skill">
               <input type="hidden" name="index" value="<?= h($editSkillIndex) ?>">
               <label>Название <input name="title" value="<?= h($editSkill['title'] ?? '') ?>" required></label>
+              <label>Номер в списке <input name="order" type="number" min="1" value="<?= h($editSkill['order'] ?? ($editSkillIndex !== '' ? ((int) $editSkillIndex + 1) : count($skills) + 1)) ?>" required></label>
               <label>Описание <textarea name="description" required><?= h($editSkill['description'] ?? '') ?></textarea></label>
               <label>Иконка, путь <input name="icon" value="<?= h($editSkill['icon'] ?? '') ?>" placeholder="/assets/svg/icons/example.svg"></label>
               <?php if (!empty($editSkill['icon']) && is_uploaded_asset((string) $editSkill['icon'])): ?>
@@ -703,7 +703,6 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
               <label>Уровень / подпись <input name="level" value="<?= h($editSkill['level'] ?? '') ?>" placeholder="system admin"></label>
               <label>Категория <input name="category" value="<?= h($editSkill['category'] ?? '') ?>" placeholder="Системы"></label>
               <label>Стек, через запятую или с новой строки <textarea name="stack"><?= h(implode("\n", $editSkill['stack'] ?? [])) ?></textarea></label>
-              <label class="check"><input name="is_hidden" type="checkbox" value="1" <?= !empty($editSkill['is_hidden']) ? 'checked' : '' ?>> Скрыть на сайте до кнопки "Показать больше"</label>
               <button class="primary" type="submit">Сохранить навык</button>
             </form>
           </section>

@@ -7,7 +7,7 @@ foreach ($projects as $project) {
   $categories[$project['category']] = $project['category_label'] ?? $project['category'];
 }
 $categoryOrder = ['all' => 'Все'] + $categories;
-$hiddenCount = count(array_filter($projects, static fn($project) => !empty($project['is_hidden'])));
+$hiddenCount = max(0, count($projects) - 4);
 ?>
 <section class="section projects" id="projects" data-section="projects">
   <div class="container">
@@ -57,7 +57,7 @@ $hiddenCount = count(array_filter($projects, static fn($project) => !empty($proj
           }
           $tools = $project['tools'] ?? [];
         ?>
-        <article class="project-card <?= !empty($project['is_hidden']) ? 'is-hidden' : '' ?>" data-expandable-item data-project-card data-category="<?= $category ?>" data-project-gallery='<?= htmlspecialchars(json_encode($gallery, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>'>
+        <article class="project-card <?= $index >= 4 ? 'is-hidden' : '' ?>" data-expandable-item data-project-card data-category="<?= $category ?>" data-project-gallery='<?= htmlspecialchars(json_encode($gallery, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>'>
           <div class="project-card__media">
             <div class="project-media" data-project-media>
               <?php if ($video): ?>
