@@ -49,9 +49,9 @@
 
     const qualityPreset = () => {
       const level = M.motionLevel();
-      if (level === 'low') return { particles: 1200, dpr: 1, speed: 0.78 };
-      if (level === 'medium') return { particles: 2400, dpr: 1.35, speed: 0.9 };
-      return { particles: 4200, dpr: 1.75, speed: 1 };
+      if (level === 'low') return { particles: 1700, dpr: 1, speed: 0.78 };
+      if (level === 'medium') return { particles: 3200, dpr: 1.35, speed: 0.9 };
+      return { particles: 5600, dpr: 1.75, speed: 1 };
     };
 
     const themeColor = () => M.isLightTheme() ? 0x090909 : 0xf4f4f1;
@@ -73,7 +73,7 @@
         const amplitude = 0.018 + Math.random() * 0.12;
         const flow = 0.42 + Math.random() * 1.65;
         const lane = band * (0.16 + Math.random() * 0.94);
-        const size = 0.45 + Math.random() * 1.8;
+        const size = 0.7 + Math.random() * 2.4;
         const depth = Math.random();
         points.push({ u: Math.random(), band, lane, family, phase, amplitude, flow, seed, size, depth });
       }
@@ -155,8 +155,8 @@
       const pointMaterial = new THREE.PointsMaterial({
         color: themeColor(),
         transparent: true,
-        opacity: M.isLightTheme() ? 0.24 : 0.58,
-        size: width < 760 ? 0.009 : 0.0068,
+        opacity: M.isLightTheme() ? 0.28 : 0.66,
+        size: width < 760 ? 0.013 : 0.0095,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         sizeAttenuation: false,
