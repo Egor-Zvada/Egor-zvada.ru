@@ -1065,7 +1065,8 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
         setStatus(admin, 'Сохраняю...');
 
         try {
-          const response = await fetch(form.action || window.location.href, {
+          const actionUrl = form.getAttribute('action') || window.location.href;
+          const response = await fetch(actionUrl, {
             method: 'POST',
             body: new FormData(form),
             credentials: 'same-origin',
