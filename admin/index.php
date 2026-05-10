@@ -315,6 +315,10 @@ try {
       require_login();
       check_csrf();
 
+      $currentAbout = load_assoc($GLOBALS['aboutFile']);
+      $manualGallery = list_from_text((string) ($_POST['about_gallery'] ?? ''));
+      $uploadedGallery = save_multiple_uploads('about_gallery_uploads', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir']);
+
       $about = [
         'lead' => trim((string) ($_POST['about_lead'] ?? '')),
         'paragraphs' => list_from_lines((string) ($_POST['about_paragraphs'] ?? '')),
@@ -322,9 +326,15 @@ try {
         'visual_top_left' => trim((string) ($_POST['visual_top_left'] ?? '')),
         'visual_top_right' => trim((string) ($_POST['visual_top_right'] ?? '')),
         'visual_tags' => list_from_text((string) ($_POST['visual_tags'] ?? '')),
+        'gallery' => array_values(array_unique(array_merge($manualGallery, $uploadedGallery))),
       ];
+
+      if (empty($about['gallery']) && !empty($currentAbout['gallery']) && empty($_POST['clear_about_gallery'])) {
+        $about['gallery'] = $currentAbout['gallery'];
+      }
+
       save_assoc($GLOBALS['aboutFile'], $about);
-      redirect_admin('settings', 'Блок "Обо мне" сохранён.');
+      redirect_admin('about', 'Блок "Обо мне" сохранён.');
     } elseif ($action === 'save_password') {
       require_login();
       check_csrf();
@@ -431,6 +441,7 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
         <div class="nav">
           <a class="<?= $tab === 'skills' ? 'is-active' : '' ?>" href="/admin/?tab=skills">Навыки</a>
           <a class="<?= $tab === 'projects' ? 'is-active' : '' ?>" href="/admin/?tab=projects">Портфолио</a>
+          <a class="<?= $tab === 'about' ? 'is-active' : '' ?>" href="/admin/?tab=about">Обо мне</a>
           <a class="<?= $tab === 'settings' ? 'is-active' : '' ?>" href="/admin/?tab=settings">Настройки</a>
           <a href="/" target="_blank" rel="noopener">Открыть сайт</a>
           <form method="post">
@@ -485,21 +496,25 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
             </form>
           </section>
 
-          <section class="panel">
-            <h2>Обо мне</h2>
-            <form method="post">
-              <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
-              <input type="hidden" name="action" value="save_about">
-              <label>Короткий лид <textarea name="about_lead"><?= h($about['lead'] ?? '') ?></textarea></label>
-              <label>Основной текст, каждый абзац с новой строки <textarea name="about_paragraphs"><?= h(implode("\n", $about['paragraphs'] ?? [])) ?></textarea></label>
-              <label>Focus строка <input name="about_focus" value="<?= h($about['focus'] ?? '') ?>"></label>
-              <label>Визуальный блок, левый заголовок <input name="visual_top_left" value="<?= h($about['visual_top_left'] ?? '') ?>"></label>
-              <label>Визуальный блок, правый заголовок <input name="visual_top_right" value="<?= h($about['visual_top_right'] ?? '') ?>"></label>
-              <label>Теги визуального блока <textarea name="visual_tags"><?= h(implode("\n", $about['visual_tags'] ?? [])) ?></textarea></label>
-              <button class="primary" type="submit">Сохранить "Обо мне"</button>
-            </form>
-          </section>
         </div>
+      <?php elseif ($tab === 'about'): ?>
+        <section class="panel">
+          <h2>Обо мне</h2>
+          <form method="post" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+            <input type="hidden" name="action" value="save_about">
+            <label>Короткий лид <textarea name="about_lead"><?= h($about['lead'] ?? '') ?></textarea></label>
+            <label>Основной текст, каждый абзац с новой строки <textarea name="about_paragraphs"><?= h(implode("\n", $about['paragraphs'] ?? [])) ?></textarea></label>
+            <label>Focus строка <input name="about_focus" value="<?= h($about['focus'] ?? '') ?>"></label>
+            <label>Подпись fallback-анимации слева <input name="visual_top_left" value="<?= h($about['visual_top_left'] ?? '') ?>"></label>
+            <label>Подпись fallback-анимации справа <input name="visual_top_right" value="<?= h($about['visual_top_right'] ?? '') ?>"></label>
+            <label>Теги fallback-анимации <textarea name="visual_tags"><?= h(implode("\n", $about['visual_tags'] ?? [])) ?></textarea></label>
+            <label>Галерея, пути через запятую или с новой строки <textarea name="about_gallery"><?= h(implode("\n", $about['gallery'] ?? [])) ?></textarea></label>
+            <label>Дозагрузить фото в галерею <input name="about_gallery_uploads[]" type="file" accept="image/*,.svg" multiple></label>
+            <label class="check"><input name="clear_about_gallery" type="checkbox" value="1"> Очистить галерею, если поле выше пустое</label>
+            <button class="primary" type="submit">Сохранить "Обо мне"</button>
+          </form>
+        </section>
       <?php elseif ($tab === 'projects'): ?>
         <div class="grid">
           <section class="panel">

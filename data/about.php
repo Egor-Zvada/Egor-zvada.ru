@@ -10,4 +10,5 @@ return [
   'visual_top_left' => 'signal map',
   'visual_top_right' => 'live / systems',
   'visual_tags' => ['Linux / Windows', 'GrandMA3', 'TouchDesigner', 'Resolume'],
+  'gallery' => [],
 ];
