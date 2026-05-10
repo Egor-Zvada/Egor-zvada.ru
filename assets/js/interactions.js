@@ -25,12 +25,13 @@
   if (adminTrigger) {
     let adminClicks = 0;
     let resetTimer;
+    const requiredClicks = Math.max(1, Number(adminTrigger.dataset.adminClicks || 10));
 
     adminTrigger.addEventListener('click', () => {
       adminClicks += 1;
       window.clearTimeout(resetTimer);
 
-      if (adminClicks >= 10) {
+      if (adminClicks >= requiredClicks) {
         window.location.href = '/admin/';
         return;
       }
