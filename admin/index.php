@@ -71,6 +71,65 @@ function save_assoc(string $file, array $items): void {
   }
 }
 
+function is_uploaded_asset(string $path): bool {
+  return strpos($path, '/assets/img/uploads/') === 0;
+}
+
+function delete_uploaded_asset(string $path, string $root): void {
+  if (!is_uploaded_asset($path)) {
+    return;
+  }
+
+  $relativePath = ltrim($path, '/');
+  $fullPath = realpath($root . '/' . $relativePath);
+  $uploadsPath = realpath($root . '/assets/img/uploads');
+  if ($fullPath && $uploadsPath && strpos($fullPath, $uploadsPath) === 0 && is_file($fullPath)) {
+    unlink($fullPath);
+  }
+}
+
+function remove_deleted_assets(array $paths, array $deletedPaths, string $root): array {
+  $deletedPaths = array_values(array_unique(array_filter($deletedPaths, 'is_string')));
+  foreach ($deletedPaths as $path) {
+    delete_uploaded_asset($path, $root);
+  }
+
+  return array_values(array_filter($paths, static fn($path) => !in_array($path, $deletedPaths, true)));
+}
+
+function default_skill_icon(string $title, string $fallback = ''): string {
+  if ($fallback !== '') {
+    return $fallback;
+  }
+
+  $normalized = function_exists('mb_strtolower') ? mb_strtolower($title, 'UTF-8') : strtolower($title);
+  $map = [
+    'grandma' => '/assets/svg/icons/grandma3.svg',
+    'touchdesigner' => '/assets/svg/icons/touchdesigner.svg',
+    'resolume' => '/assets/svg/icons/resolume.svg',
+    'final cut' => '/assets/svg/icons/finalcut.svg',
+    'linux' => '/assets/svg/icons/systems.svg',
+    'windows' => '/assets/svg/icons/systems.svg',
+    'nginx' => '/assets/svg/icons/infrastructure.svg',
+    'apache' => '/assets/svg/icons/infrastructure.svg',
+    'трансля' => '/assets/svg/icons/broadcast.svg',
+    'ndi' => '/assets/svg/icons/broadcast.svg',
+    'ии' => '/assets/svg/icons/ai.svg',
+    'ai' => '/assets/svg/icons/ai.svg',
+    'генерац' => '/assets/svg/icons/generation.svg',
+    'чат' => '/assets/svg/icons/chatbot.svg',
+    'сети' => '/assets/svg/icons/network.svg',
+  ];
+
+  foreach ($map as $needle => $icon) {
+    if (strpos($normalized, $needle) !== false) {
+      return $icon;
+    }
+  }
+
+  return '';
+}
+
 function list_from_text(string $value): array {
   $parts = preg_split('/[\r\n,]+/u', $value) ?: [];
   $parts = array_map('trim', $parts);
@@ -200,11 +259,23 @@ try {
       $indexValue = (string) ($_POST['index'] ?? '');
       $index = $indexValue === '' ? null : (int) $indexValue;
       $old = $index !== null && isset($skills[$index]) ? $skills[$index] : [];
+      $oldIcon = (string) ($old['icon'] ?? '');
+      $title = trim((string) ($_POST['title'] ?? ''));
+      $defaultIcon = default_skill_icon($title, (string) ($old['default_icon'] ?? (is_uploaded_asset($oldIcon) ? '' : $oldIcon)));
+      $icon = trim((string) ($_POST['icon'] ?? $oldIcon));
+
+      if (!empty($_POST['delete_icon'])) {
+        delete_uploaded_asset($oldIcon, $GLOBALS['root']);
+        $icon = $defaultIcon ?: default_skill_icon($title);
+      }
+
+      $icon = save_upload('icon_upload', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], $icon);
 
       $item = [
-        'title' => trim((string) ($_POST['title'] ?? '')),
+        'title' => $title,
         'description' => trim((string) ($_POST['description'] ?? '')),
-        'icon' => save_upload('icon_upload', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], trim((string) ($_POST['icon'] ?? $old['icon'] ?? ''))),
+        'icon' => $icon,
+        'default_icon' => $defaultIcon,
         'level' => trim((string) ($_POST['level'] ?? '')),
         'category' => trim((string) ($_POST['category'] ?? '')),
         'stack' => list_from_text((string) ($_POST['stack'] ?? '')),
@@ -243,7 +314,23 @@ try {
       $old = $index !== null && isset($projects[$index]) ? $projects[$index] : [];
       $title = trim((string) ($_POST['title'] ?? ''));
       $manualGallery = list_from_text((string) ($_POST['gallery'] ?? ''));
+      $manualGallery = remove_deleted_assets($manualGallery, $_POST['delete_gallery'] ?? [], $GLOBALS['root']);
       $uploadedGallery = save_multiple_uploads('gallery_uploads', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir']);
+      $oldImage = (string) ($old['image'] ?? '');
+      $defaultImage = (string) ($old['default_image'] ?? (is_uploaded_asset($oldImage) ? '' : $oldImage));
+      $image = trim((string) ($_POST['image'] ?? $oldImage));
+
+      if (!empty($_POST['delete_image'])) {
+        delete_uploaded_asset($oldImage, $GLOBALS['root']);
+        $image = $defaultImage;
+        $manualGallery = array_values(array_filter($manualGallery, static fn($path) => $path !== $oldImage));
+      }
+
+      if ($oldImage !== '' && in_array($oldImage, $_POST['delete_gallery'] ?? [], true)) {
+        $image = $defaultImage;
+      }
+
+      $image = save_upload('image_upload', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], $image);
 
       $item = [
         'id' => trim((string) ($_POST['id'] ?? '')) ?: slugify($title),
@@ -253,7 +340,8 @@ try {
         'category_label' => trim((string) ($_POST['category_label'] ?? '')),
         'description' => trim((string) ($_POST['description'] ?? '')),
         'full_description' => trim((string) ($_POST['full_description'] ?? '')),
-        'image' => save_upload('image_upload', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], trim((string) ($_POST['image'] ?? $old['image'] ?? ''))),
+        'image' => $image,
+        'default_image' => $defaultImage,
         'gallery' => array_values(array_unique(array_merge($manualGallery, $uploadedGallery))),
         'video' => trim((string) ($_POST['video'] ?? '')) ?: null,
         'tags' => list_from_text((string) ($_POST['tags'] ?? '')),
@@ -317,6 +405,12 @@ try {
 
       $currentAbout = load_assoc($GLOBALS['aboutFile']);
       $manualGallery = list_from_text((string) ($_POST['about_gallery'] ?? ''));
+      $deletedAboutGallery = $_POST['delete_about_gallery'] ?? [];
+      if (!empty($_POST['clear_about_gallery'])) {
+        $deletedAboutGallery = array_merge($deletedAboutGallery, $currentAbout['gallery'] ?? []);
+        $manualGallery = [];
+      }
+      $manualGallery = remove_deleted_assets($manualGallery, $deletedAboutGallery, $GLOBALS['root']);
       $uploadedGallery = save_multiple_uploads('about_gallery_uploads', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir']);
 
       $about = [
@@ -329,7 +423,7 @@ try {
         'gallery' => array_values(array_unique(array_merge($manualGallery, $uploadedGallery))),
       ];
 
-      if (empty($about['gallery']) && !empty($currentAbout['gallery']) && empty($_POST['clear_about_gallery'])) {
+      if (empty($about['gallery']) && !empty($currentAbout['gallery']) && empty($_POST['clear_about_gallery']) && empty($deletedAboutGallery)) {
         $about['gallery'] = $currentAbout['gallery'];
       }
 
@@ -405,6 +499,10 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
     .row strong { display: block; }
     .row span { display: block; color: var(--muted); font-size: 13px; }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .file-list { display: grid; gap: 8px; margin: -4px 0 12px; }
+    .file-list__item { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); background: #0d0d0d; }
+    .file-list__item img { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--line); background: #050505; }
+    .file-list__item code { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
     form { margin: 0; }
     label { display: grid; gap: 6px; margin-bottom: 12px; color: var(--muted); font-size: 13px; }
     input, textarea, select { width: 100%; border: 1px solid var(--line); background: #090909; color: var(--text); padding: 10px 12px; font: inherit; }
@@ -510,6 +608,19 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
             <label>Подпись fallback-анимации справа <input name="visual_top_right" value="<?= h($about['visual_top_right'] ?? '') ?>"></label>
             <label>Теги fallback-анимации <textarea name="visual_tags"><?= h(implode("\n", $about['visual_tags'] ?? [])) ?></textarea></label>
             <label>Галерея, пути через запятую или с новой строки <textarea name="about_gallery"><?= h(implode("\n", $about['gallery'] ?? [])) ?></textarea></label>
+            <?php if (!empty($about['gallery'])): ?>
+              <div class="file-list" aria-label="Текущие фото">
+                <?php foreach ($about['gallery'] as $image): ?>
+                  <label class="file-list__item">
+                    <img src="<?= h($image) ?>" alt="">
+                    <code><?= h($image) ?></code>
+                    <?php if (is_uploaded_asset((string) $image)): ?>
+                      <span class="check"><input name="delete_about_gallery[]" type="checkbox" value="<?= h($image) ?>"> Удалить</span>
+                    <?php endif; ?>
+                  </label>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
             <label>Дозагрузить фото в галерею <input name="about_gallery_uploads[]" type="file" accept="image/*,.svg" multiple></label>
             <label class="check"><input name="clear_about_gallery" type="checkbox" value="1"> Очистить галерею, если поле выше пустое</label>
             <button class="primary" type="submit">Сохранить "Обо мне"</button>
@@ -554,8 +665,24 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
               <label>Краткое описание <textarea name="description" required><?= h($editProject['description'] ?? '') ?></textarea></label>
               <label>Полное описание <textarea name="full_description"><?= h($editProject['full_description'] ?? '') ?></textarea></label>
               <label>Главная картинка, путь <input name="image" value="<?= h($editProject['image'] ?? '') ?>" placeholder="/assets/img/projects/example.svg"></label>
+              <?php if (!empty($editProject['image']) && is_uploaded_asset((string) $editProject['image'])): ?>
+                <label class="check"><input name="delete_image" type="checkbox" value="1"> Удалить главную картинку с сервера и вернуть дефолт</label>
+              <?php endif; ?>
               <label>Загрузить главную картинку <input name="image_upload" type="file" accept="image/*,.svg"></label>
               <label>Галерея, пути через запятую или с новой строки <textarea name="gallery"><?= h(implode("\n", $editProject['gallery'] ?? [])) ?></textarea></label>
+              <?php if (!empty($editProject['gallery'])): ?>
+                <div class="file-list" aria-label="Текущая галерея проекта">
+                  <?php foreach ($editProject['gallery'] as $image): ?>
+                    <label class="file-list__item">
+                      <img src="<?= h($image) ?>" alt="">
+                      <code><?= h($image) ?></code>
+                      <?php if (is_uploaded_asset((string) $image)): ?>
+                        <span class="check"><input name="delete_gallery[]" type="checkbox" value="<?= h($image) ?>"> Удалить</span>
+                      <?php endif; ?>
+                    </label>
+                  <?php endforeach; ?>
+                </div>
+              <?php endif; ?>
               <label>Дозагрузить картинки в галерею <input name="gallery_uploads[]" type="file" accept="image/*,.svg" multiple></label>
               <label>Видео, путь или URL <input name="video" value="<?= h($editProject['video'] ?? '') ?>"></label>
               <label>Теги <textarea name="tags"><?= h(implode("\n", $editProject['tags'] ?? [])) ?></textarea></label>
@@ -599,6 +726,9 @@ $editProjectIndex = $editProject === null ? '' : (string) ((int) $_GET['edit_pro
               <label>Название <input name="title" value="<?= h($editSkill['title'] ?? '') ?>" required></label>
               <label>Описание <textarea name="description" required><?= h($editSkill['description'] ?? '') ?></textarea></label>
               <label>Иконка, путь <input name="icon" value="<?= h($editSkill['icon'] ?? '') ?>" placeholder="/assets/svg/icons/example.svg"></label>
+              <?php if (!empty($editSkill['icon']) && is_uploaded_asset((string) $editSkill['icon'])): ?>
+                <label class="check"><input name="delete_icon" type="checkbox" value="1"> Удалить загруженную иконку с сервера и вернуть дефолт</label>
+              <?php endif; ?>
               <label>Загрузить иконку/картинку <input name="icon_upload" type="file" accept="image/*,.svg"></label>
               <label>Уровень / подпись <input name="level" value="<?= h($editSkill['level'] ?? '') ?>" placeholder="system admin"></label>
               <label>Категория <input name="category" value="<?= h($editSkill['category'] ?? '') ?>" placeholder="Системы"></label>

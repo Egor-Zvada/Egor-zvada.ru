@@ -43,7 +43,7 @@ $visibleCount = count($visibleSkills);
               <span class="skill-card__index"><?= str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) ?></span>
               <span class="skill-card__category"><?= htmlspecialchars($skill['category'], ENT_QUOTES, 'UTF-8') ?></span>
             </div>
-            <img class="skill-card__icon" src="<?= htmlspecialchars($skill['icon'], ENT_QUOTES, 'UTF-8') ?>" alt="" width="48" height="48">
+            <img class="skill-card__icon <?= strpos((string) ($skill['icon'] ?? ''), '/assets/img/uploads/') === 0 ? 'skill-card__icon--uploaded' : '' ?>" src="<?= htmlspecialchars($skill['icon'], ENT_QUOTES, 'UTF-8') ?>" alt="" width="48" height="48">
             <div class="skill-card__body">
               <h3><?= htmlspecialchars($skill['title'], ENT_QUOTES, 'UTF-8') ?></h3>
               <p><?= htmlspecialchars($skill['description'], ENT_QUOTES, 'UTF-8') ?></p>
