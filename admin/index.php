@@ -1,7 +1,20 @@
 <?php
 declare(strict_types=1);
 
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+  || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+session_set_cookie_params([
+  'lifetime' => 0,
+  'path' => '/',
+  'secure' => $isHttps,
+  'httponly' => true,
+  'samesite' => 'Strict',
+]);
 session_start();
+header('X-Frame-Options: DENY');
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: same-origin');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 $root = dirname(__DIR__);
 $config = require __DIR__ . '/config.php';
@@ -35,6 +48,20 @@ function check_csrf(): void {
     http_response_code(403);
     exit('Bad CSRF token');
   }
+}
+
+function verify_admin_password(array $config, string $username, string $password): bool {
+  if (!hash_equals((string) ($config['username'] ?? ''), $username)) {
+    return false;
+  }
+
+  $passwordHash = (string) ($config['password_hash'] ?? '');
+  if ($passwordHash !== '' && password_verify($password, $passwordHash)) {
+    return true;
+  }
+
+  $legacyHash = (string) ($config['password_sha256'] ?? '');
+  return $legacyHash !== '' && hash_equals($legacyHash, hash('sha256', $password));
 }
 
 function redirect_admin(string $tab = 'skills', string $message = ''): void {
@@ -206,6 +233,27 @@ function slugify(string $value): string {
   return $value !== '' ? $value : 'item';
 }
 
+function validate_svg_upload(string $tmpName): void {
+  $contents = file_get_contents($tmpName, false, null, 0, 512 * 1024);
+  if ($contents === false || stripos($contents, '<svg') === false) {
+    throw new RuntimeException('SVG-файл не похож на SVG.');
+  }
+
+  $blockedPatterns = [
+    '/<\s*script\b/i',
+    '/<\s*foreignObject\b/i',
+    '/\son[a-z]+\s*=/i',
+    '/javascript\s*:/i',
+    '/data\s*:\s*text\/html/i',
+  ];
+
+  foreach ($blockedPatterns as $pattern) {
+    if (preg_match($pattern, $contents)) {
+      throw new RuntimeException('SVG содержит потенциально опасный код.');
+    }
+  }
+}
+
 function save_upload(string $field, string $uploadFsDir, string $uploadWebDir, string $fallback = ''): string {
   if (empty($_FILES[$field]) || ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
     return $fallback;
@@ -232,7 +280,9 @@ function save_upload(string $field, string $uploadFsDir, string $uploadWebDir, s
     throw new RuntimeException('Можно загружать только изображения: jpg, png, webp, gif, svg.');
   }
 
-  if ($extension !== 'svg') {
+  if ($extension === 'svg') {
+    validate_svg_upload($tmpName);
+  } else {
     $imageInfo = @getimagesize($tmpName);
     if ($imageInfo === false) {
       throw new RuntimeException('Файл не похож на изображение.');
@@ -293,9 +343,8 @@ try {
     if ($action === 'login') {
       $username = trim((string) ($_POST['username'] ?? ''));
       $password = (string) ($_POST['password'] ?? '');
-      $passwordHash = hash('sha256', $password);
-
-      if (hash_equals($config['username'], $username) && hash_equals($config['password_sha256'], $passwordHash)) {
+      if (verify_admin_password($config, $username, $password)) {
+        session_regenerate_id(true);
         $_SESSION['admin_logged_in'] = true;
         csrf_token();
         redirect_admin('skills');
@@ -359,6 +408,7 @@ try {
       $skills = load_items($GLOBALS['skillsFile']);
       $index = (int) ($_POST['index'] ?? -1);
       if (isset($skills[$index])) {
+        delete_uploaded_asset((string) ($skills[$index]['icon'] ?? ''), $GLOBALS['root']);
         array_splice($skills, $index, 1);
         save_items($GLOBALS['skillsFile'], $skills);
       }
@@ -454,6 +504,10 @@ try {
       $projects = load_items($GLOBALS['projectsFile']);
       $index = (int) ($_POST['index'] ?? -1);
       if (isset($projects[$index])) {
+        delete_uploaded_asset((string) ($projects[$index]['image'] ?? ''), $GLOBALS['root']);
+        foreach (($projects[$index]['gallery'] ?? []) as $galleryImage) {
+          delete_uploaded_asset((string) $galleryImage, $GLOBALS['root']);
+        }
         array_splice($projects, $index, 1);
         save_items($GLOBALS['projectsFile'], $projects);
       }
@@ -515,7 +569,8 @@ try {
       if ($newPassword !== '' || $newPasswordRepeat !== '') {
         $adminConfig = load_assoc(__DIR__ . '/config.php');
         $adminConfig['username'] = trim((string) ($_POST['admin_username'] ?? $adminConfig['username'] ?? 'admin')) ?: 'admin';
-        $adminConfig['password_sha256'] = hash('sha256', $newPassword);
+        $adminConfig['password_hash'] = password_hash($newPassword, PASSWORD_DEFAULT);
+        unset($adminConfig['password_sha256']);
         save_assoc(__DIR__ . '/config.php', $adminConfig);
       } else {
         $adminConfig = load_assoc(__DIR__ . '/config.php');
@@ -586,6 +641,9 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
     .tags-grid .panel--wide { grid-column: 1 / -1; }
     .panel { border: 1px solid var(--line); background: var(--panel); padding: 18px; }
     .panel h2 { margin: 0 0 14px; font-size: 22px; letter-spacing: -.025em; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .panel-head h2 { margin: 0; }
+    .form-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .list { display: grid; gap: 8px; }
     .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); background: var(--row); }
     .row strong { display: block; }
@@ -633,6 +691,8 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
       .row { grid-template-columns: 1fr; }
       .actions { display: grid; grid-template-columns: 1fr; }
       .actions .button, .actions button { width: 100%; }
+      .panel-head, .form-actions { align-items: stretch; flex-direction: column; }
+      .panel-head .button, .form-actions .button, .form-actions button { width: 100%; }
       .file-list__item { grid-template-columns: 44px 1fr; }
       .file-list__item .check { grid-column: 1 / -1; }
       .tag-manager__add, .category-row { grid-template-columns: 1fr; }
@@ -801,7 +861,10 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
       <?php elseif ($tab === 'projects'): ?>
         <div class="grid">
           <section class="panel">
-            <h2>Проекты</h2>
+            <div class="panel-head">
+              <h2>Проекты</h2>
+              <a class="button primary" href="/admin/?tab=projects">Добавить мероприятие/проект</a>
+            </div>
             <div class="list">
               <?php foreach ($projects as $index => $project): ?>
                 <div class="row">
@@ -811,7 +874,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                   </div>
                   <div class="actions">
                     <a class="button" href="/admin/?tab=projects&edit_project=<?= $index ?>">Редактировать</a>
-                    <form method="post" onsubmit="return confirm('Удалить проект?')">
+                    <form method="post" action="/admin/?tab=projects" onsubmit="return confirm('Удалить проект?')">
                       <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
                       <input type="hidden" name="action" value="delete_project">
                       <input type="hidden" name="index" value="<?= $index ?>">
@@ -824,9 +887,12 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
           </section>
 
           <section class="panel">
-            <h2><?= $editProject ? 'Редактировать проект' : 'Добавить проект' ?></h2>
+            <div class="panel-head">
+              <h2><?= $editProject ? 'Редактировать проект' : 'Добавить мероприятие/проект' ?></h2>
+              <?php if ($editProject): ?><a class="button" href="/admin/?tab=projects">Добавить новый</a><?php endif; ?>
+            </div>
             <p class="hint">На сайте автоматически видны 4 самых свежих проекта по дате. Остальные уходят под кнопку "Показать ещё".</p>
-            <form method="post" enctype="multipart/form-data">
+            <form method="post" action="/admin/?tab=projects" enctype="multipart/form-data">
               <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
               <input type="hidden" name="action" value="save_project">
               <input type="hidden" name="index" value="<?= h($editProjectIndex) ?>">
@@ -881,14 +947,20 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               </div>
               <label>Дополнительные теги <textarea name="tags"><?= h(implode("\n", array_values(array_diff($editProject['tags'] ?? [], $projectTags)))) ?></textarea></label>
               <label>Инструменты <textarea name="tools"><?= h(implode("\n", $editProject['tools'] ?? [])) ?></textarea></label>
-              <button class="primary" type="submit">Сохранить проект</button>
+              <div class="form-actions">
+                <button class="primary" type="submit">Сохранить проект</button>
+                <?php if ($editProject): ?><a class="button" href="/admin/?tab=projects">Добавить новый</a><?php endif; ?>
+              </div>
             </form>
           </section>
         </div>
       <?php else: ?>
         <div class="grid">
           <section class="panel">
-            <h2>Навыки</h2>
+            <div class="panel-head">
+              <h2>Навыки</h2>
+              <a class="button primary" href="/admin/?tab=skills">Добавить навык</a>
+            </div>
             <div class="list">
               <?php foreach ($skills as $index => $skill): ?>
                 <div class="row">
@@ -898,7 +970,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                   </div>
                   <div class="actions">
                     <a class="button" href="/admin/?tab=skills&edit_skill=<?= $index ?>">Редактировать</a>
-                    <form method="post" onsubmit="return confirm('Удалить навык?')">
+                    <form method="post" action="/admin/?tab=skills" onsubmit="return confirm('Удалить навык?')">
                       <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
                       <input type="hidden" name="action" value="delete_skill">
                       <input type="hidden" name="index" value="<?= $index ?>">
@@ -911,8 +983,11 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
           </section>
 
           <section class="panel">
-            <h2><?= $editSkill ? 'Редактировать навык' : 'Добавить навык' ?></h2>
-            <form method="post" enctype="multipart/form-data">
+            <div class="panel-head">
+              <h2><?= $editSkill ? 'Редактировать навык' : 'Добавить навык' ?></h2>
+              <?php if ($editSkill): ?><a class="button" href="/admin/?tab=skills">Добавить новый</a><?php endif; ?>
+            </div>
+            <form method="post" action="/admin/?tab=skills" enctype="multipart/form-data">
               <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
               <input type="hidden" name="action" value="save_skill">
               <input type="hidden" name="index" value="<?= h($editSkillIndex) ?>">
@@ -937,7 +1012,10 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                   <?php endforeach; ?>
               </div>
               <label>Дополнительные теги навыка <textarea name="stack"><?= h(implode("\n", array_values(array_diff($editSkill['stack'] ?? [], $skillTags)))) ?></textarea></label>
-              <button class="primary" type="submit">Сохранить навык</button>
+              <div class="form-actions">
+                <button class="primary" type="submit">Сохранить навык</button>
+                <?php if ($editSkill): ?><a class="button" href="/admin/?tab=skills">Добавить новый</a><?php endif; ?>
+              </div>
             </form>
           </section>
         </div>
@@ -1038,6 +1116,12 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
         admin.prepend(status);
       };
 
+      const normalizeAdminUrl = (url) => {
+        const nextUrl = new URL(url || window.location.href, window.location.origin);
+        nextUrl.searchParams.delete('_');
+        return nextUrl;
+      };
+
       const replaceAdmin = (html, url) => {
         const nextDoc = parser.parseFromString(html, 'text/html');
         const nextAdmin = nextDoc.querySelector('.admin');
@@ -1049,7 +1133,10 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
 
         currentAdmin.innerHTML = nextAdmin.innerHTML;
         currentAdmin.classList.remove('is-busy');
-        if (url) window.history.replaceState(null, '', url);
+        if (url) {
+          const nextUrl = normalizeAdminUrl(url);
+          window.history.replaceState(null, '', nextUrl.pathname + nextUrl.search);
+        }
         document.dispatchEvent(new CustomEvent('admin:content-updated'));
       };
 
@@ -1078,7 +1165,21 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
             throw new Error(html || 'Не получилось сохранить.');
           }
 
-          replaceAdmin(html, response.url);
+          const freshUrl = normalizeAdminUrl(response.url || actionUrl);
+          freshUrl.searchParams.set('_', String(Date.now()));
+          const freshResponse = await fetch(freshUrl.toString(), {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'X-Requested-With': 'fetch' },
+          });
+
+          const freshHtml = await freshResponse.text();
+          if (!freshResponse.ok) {
+            throw new Error(freshHtml || 'Сохранено, но не получилось обновить вкладку.');
+          }
+
+          replaceAdmin(freshHtml, freshResponse.url);
         } catch (error) {
           admin.classList.remove('is-busy');
           setStatus(admin, error.message || 'Не получилось сохранить.', 'error');
