@@ -107,6 +107,11 @@ function is_project_placeholder_asset(string $path): bool {
   return strpos($path, '/assets/img/projects/') === 0;
 }
 
+function is_video_asset(string $path): bool {
+  $extension = strtolower(pathinfo(parse_url($path, PHP_URL_PATH) ?: $path, PATHINFO_EXTENSION));
+  return in_array($extension, ['mp4', 'webm', 'mov', 'm4v'], true);
+}
+
 function delete_uploaded_asset(string $path, string $root): void {
   if (!is_uploaded_asset($path)) {
     return;
@@ -254,7 +259,7 @@ function validate_svg_upload(string $tmpName): void {
   }
 }
 
-function save_upload(string $field, string $uploadFsDir, string $uploadWebDir, string $fallback = ''): string {
+function save_upload(string $field, string $uploadFsDir, string $uploadWebDir, string $fallback = '', bool $allowVideo = false): string {
   if (empty($_FILES[$field]) || ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
     return $fallback;
   }
@@ -264,8 +269,9 @@ function save_upload(string $field, string $uploadFsDir, string $uploadWebDir, s
     throw new RuntimeException('Ошибка загрузки файла.');
   }
 
-  if (($file['size'] ?? 0) > 8 * 1024 * 1024) {
-    throw new RuntimeException('Файл слишком большой. Максимум 8 МБ.');
+  $maxSize = $allowVideo ? 80 * 1024 * 1024 : 8 * 1024 * 1024;
+  if (($file['size'] ?? 0) > $maxSize) {
+    throw new RuntimeException('Файл слишком большой. Максимум ' . ($allowVideo ? '80' : '8') . ' МБ.');
   }
 
   if (!is_dir($uploadFsDir) && !mkdir($uploadFsDir, 0775, true)) {
@@ -276,11 +282,29 @@ function save_upload(string $field, string $uploadFsDir, string $uploadWebDir, s
   $originalName = (string) $file['name'];
   $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
   $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
+  $videoExtensions = ['mp4', 'webm', 'mov', 'm4v'];
+  if ($allowVideo) {
+    $allowedExtensions = array_merge($allowedExtensions, $videoExtensions);
+  }
   if (!in_array($extension, $allowedExtensions, true)) {
-    throw new RuntimeException('Можно загружать только изображения: jpg, png, webp, gif, svg.');
+    throw new RuntimeException($allowVideo
+      ? 'Можно загружать изображения и видео: jpg, png, webp, gif, svg, mp4, webm, mov, m4v.'
+      : 'Можно загружать только изображения: jpg, png, webp, gif, svg.');
   }
 
-  if ($extension === 'svg') {
+  if (in_array($extension, $videoExtensions, true)) {
+    $mime = '';
+    if (function_exists('finfo_open')) {
+      $finfo = finfo_open(FILEINFO_MIME_TYPE);
+      if ($finfo) {
+        $mime = (string) finfo_file($finfo, $tmpName);
+        finfo_close($finfo);
+      }
+    }
+    if ($mime !== '' && strpos($mime, 'video/') !== 0 && $mime !== 'application/octet-stream') {
+      throw new RuntimeException('Файл не похож на видео.');
+    }
+  } elseif ($extension === 'svg') {
     validate_svg_upload($tmpName);
   } else {
     $imageInfo = @getimagesize($tmpName);
@@ -300,7 +324,7 @@ function save_upload(string $field, string $uploadFsDir, string $uploadWebDir, s
   return $uploadWebDir . '/' . $targetName;
 }
 
-function save_multiple_uploads(string $field, string $uploadFsDir, string $uploadWebDir): array {
+function save_multiple_uploads(string $field, string $uploadFsDir, string $uploadWebDir, bool $allowVideo = false): array {
   if (empty($_FILES[$field]) || !is_array($_FILES[$field]['name'])) {
     return [];
   }
@@ -319,7 +343,7 @@ function save_multiple_uploads(string $field, string $uploadFsDir, string $uploa
       'error' => $files['error'][$index] ?? UPLOAD_ERR_NO_FILE,
       'size' => $files['size'][$index] ?? 0,
     ];
-    $saved[] = save_upload('_single_gallery_upload', $uploadFsDir, $uploadWebDir);
+    $saved[] = save_upload('_single_gallery_upload', $uploadFsDir, $uploadWebDir, '', $allowVideo);
     unset($_FILES['_single_gallery_upload']);
   }
 
@@ -424,10 +448,12 @@ try {
       $title = trim((string) ($_POST['title'] ?? ''));
       $manualGallery = list_from_text((string) ($_POST['gallery'] ?? ''));
       $manualGallery = remove_deleted_assets($manualGallery, $_POST['delete_gallery'] ?? [], $GLOBALS['root']);
-      $uploadedGallery = save_multiple_uploads('gallery_uploads', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir']);
+      $uploadedGallery = save_multiple_uploads('gallery_uploads', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], true);
       $oldImage = (string) ($old['image'] ?? '');
+      $oldVideo = (string) ($old['video'] ?? '');
       $defaultImage = (string) ($old['default_image'] ?? (is_uploaded_asset($oldImage) ? '' : $oldImage));
       $image = trim((string) ($_POST['image'] ?? $oldImage));
+      $video = trim((string) ($_POST['video'] ?? $oldVideo));
 
       if (!empty($_POST['delete_image'])) {
         delete_uploaded_asset($oldImage, $GLOBALS['root']);
@@ -440,6 +466,15 @@ try {
       }
 
       $image = save_upload('image_upload', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], $image);
+      if (!empty($_POST['delete_video'])) {
+        delete_uploaded_asset($oldVideo, $GLOBALS['root']);
+        $video = '';
+        $manualGallery = array_values(array_filter($manualGallery, static fn($path) => $path !== $oldVideo));
+      }
+      if ($oldVideo !== '' && in_array($oldVideo, $_POST['delete_gallery'] ?? [], true)) {
+        $video = '';
+      }
+      $video = save_upload('video_upload', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], $video, true);
 
       $tagsData = load_assoc($GLOBALS['tagsFile']);
       $projectCategories = $tagsData['project_categories'] ?? [];
@@ -456,7 +491,7 @@ try {
         'image' => $image,
         'default_image' => $defaultImage,
         'gallery' => array_values(array_unique(array_merge($manualGallery, $uploadedGallery))),
-        'video' => trim((string) ($_POST['video'] ?? '')) ?: null,
+        'video' => $video ?: null,
         'tags' => array_values(array_unique(array_merge(
           list_from_array($_POST['tags_select'] ?? []),
           list_from_text((string) ($_POST['tags'] ?? ''))
@@ -489,6 +524,9 @@ try {
       if ($item['image'] !== '' && !in_array($item['image'], $item['gallery'], true)) {
         array_unshift($item['gallery'], $item['image']);
       }
+      if (!empty($item['video']) && !in_array($item['video'], $item['gallery'], true)) {
+        $item['gallery'][] = $item['video'];
+      }
 
       if ($index === null) {
         $projects[] = $item;
@@ -505,6 +543,7 @@ try {
       $index = (int) ($_POST['index'] ?? -1);
       if (isset($projects[$index])) {
         delete_uploaded_asset((string) ($projects[$index]['image'] ?? ''), $GLOBALS['root']);
+        delete_uploaded_asset((string) ($projects[$index]['video'] ?? ''), $GLOBALS['root']);
         foreach (($projects[$index]['gallery'] ?? []) as $galleryImage) {
           delete_uploaded_asset((string) $galleryImage, $GLOBALS['root']);
         }
@@ -657,7 +696,8 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .file-list { display: grid; gap: 8px; margin: -4px 0 12px; }
     .file-list__item { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); background: var(--row); }
-    .file-list__item img { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--line); background: var(--image-bg); }
+    .file-list__item img, .file-list__item video, .file-list__video-thumb { width: 44px; height: 44px; object-fit: contain; border: 1px solid var(--line); background: var(--image-bg); }
+    .file-list__video-thumb { display: grid; place-items: center; color: var(--muted); font: 10px/1 var(--font-mono, monospace); text-transform: uppercase; }
     .file-list__item code { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
     form { margin: 0; }
     label { display: grid; gap: 6px; margin-bottom: 12px; color: var(--muted); font-size: 13px; }
@@ -946,7 +986,11 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                 <div class="file-list" aria-label="Текущая галерея проекта">
                   <?php foreach ($editProject['gallery'] as $image): ?>
                     <label class="file-list__item">
-                      <img src="<?= h($image) ?>" alt="">
+                      <?php if (is_video_asset((string) $image)): ?>
+                        <span class="file-list__video-thumb">video</span>
+                      <?php else: ?>
+                        <img src="<?= h($image) ?>" alt="">
+                      <?php endif; ?>
                       <code><?= h($image) ?></code>
                       <?php if (is_uploaded_asset((string) $image)): ?>
                         <span class="check"><input name="delete_gallery[]" type="checkbox" value="<?= h($image) ?>"> Удалить</span>
@@ -955,8 +999,12 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                   <?php endforeach; ?>
                 </div>
               <?php endif; ?>
-              <label>Дозагрузить картинки в галерею <input name="gallery_uploads[]" type="file" accept="image/*,.svg" multiple></label>
+              <label>Дозагрузить фото/видео в галерею <input name="gallery_uploads[]" type="file" accept="image/*,.svg,video/mp4,video/webm,video/quicktime,.mov,.m4v" multiple></label>
               <label>Видео, путь или URL <input name="video" value="<?= h($editProject['video'] ?? '') ?>"></label>
+              <?php if (!empty($editProject['video']) && is_uploaded_asset((string) $editProject['video'])): ?>
+                <label class="check"><input name="delete_video" type="checkbox" value="1"> Удалить видео с сервера</label>
+              <?php endif; ?>
+              <label>Загрузить видео <input name="video_upload" type="file" accept="video/mp4,video/webm,video/quicktime,.mov,.m4v"></label>
               <label>Теги из списка</label>
               <div class="tag-picker" aria-label="Теги проекта">
                   <?php foreach ($projectTags as $tag): ?>
