@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 
-$contacts = require __DIR__ . '/data/contacts.php';
+require_once __DIR__ . '/lib/content.php';
+
+$contacts = ez_get_contacts();
 $text = (string) ($contacts['telegram_url'] ?? 'https://t.me/egor_zvada');
 
 function qr_gf_mul(int $x, int $y): int {

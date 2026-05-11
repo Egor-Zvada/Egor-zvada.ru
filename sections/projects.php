@@ -1,5 +1,6 @@
 <?php
-$projects = include __DIR__ . '/../data/projects.php';
+require_once __DIR__ . '/../lib/content.php';
+$projects = ez_get_projects();
 usort($projects, static fn($a, $b) => strcmp($b['date'], $a['date']));
 
 $isProjectVideo = static function (string $path): bool {

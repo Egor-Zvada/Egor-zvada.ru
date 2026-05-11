@@ -1,5 +1,7 @@
 <?php
-$siteSettings = include __DIR__ . '/data/settings.php';
+require_once __DIR__ . '/lib/content.php';
+
+$siteSettings = ez_get_settings();
 $pageTitle = 'Егор Звада — портфолио';
 $pageDescription = 'Системный администратор и технический специалист мероприятий. Сцена, медиа, ИИ и цифровая инфраструктура.';
 $pageVersion = $siteSettings['version'] ?? '0.2-beta';

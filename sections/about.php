@@ -1,4 +1,7 @@
-<?php $about = include __DIR__ . '/../data/about.php'; ?>
+<?php
+require_once __DIR__ . '/../lib/content.php';
+$about = ez_get_about();
+?>
 <?php
 $aboutGallery = array_values(array_filter($about['gallery'] ?? [], static fn($path) => is_string($path) && trim($path) !== ''));
 $fallbackAboutPhoto = '/assets/img/about/about.jpg';

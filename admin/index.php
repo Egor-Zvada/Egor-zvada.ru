@@ -17,6 +17,8 @@ header('Referrer-Policy: same-origin');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
 $root = dirname(__DIR__);
+require_once $root . '/lib/content.php';
+
 $config = require __DIR__ . '/config.php';
 $skillsFile = $root . '/data/skills.php';
 $projectsFile = $root . '/data/projects.php';
@@ -74,16 +76,28 @@ function redirect_admin(string $tab = 'skills', string $message = ''): void {
 }
 
 function load_items(string $file): array {
+  if (in_array(basename($file), ['skills.php', 'projects.php'], true)) {
+    return ez_load_items_for_file($file);
+  }
+
   $items = require $file;
   return is_array($items) ? array_values($items) : [];
 }
 
 function load_assoc(string $file): array {
+  if (in_array(basename($file), ['settings.php', 'contacts.php', 'about.php', 'tags.php'], true)) {
+    return ez_load_assoc_for_file($file);
+  }
+
   $items = require $file;
   return is_array($items) ? $items : [];
 }
 
 function save_items(string $file, array $items): void {
+  if (ez_save_items_for_file($file, $items)) {
+    return;
+  }
+
   $export = var_export(array_values($items), true);
   $php = "<?php\n\nreturn " . $export . ";\n";
   if (file_put_contents($file, $php, LOCK_EX) === false) {
@@ -92,6 +106,10 @@ function save_items(string $file, array $items): void {
 }
 
 function save_assoc(string $file, array $items): void {
+  if (ez_save_assoc_for_file($file, $items)) {
+    return;
+  }
+
   $export = var_export($items, true);
   $php = "<?php\n\nreturn " . $export . ";\n";
   if (file_put_contents($file, $php, LOCK_EX) === false) {

@@ -1,4 +1,7 @@
-<?php $contacts = include __DIR__ . '/../data/contacts.php'; ?>
+<?php
+require_once __DIR__ . '/../lib/content.php';
+$contacts = ez_get_contacts();
+?>
 
 <section class="section contacts" id="contacts" data-section="contacts">
   <div class="container contacts__layout">

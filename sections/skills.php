@@ -1,5 +1,6 @@
 <?php
-$skills = include __DIR__ . '/../data/skills.php';
+require_once __DIR__ . '/../lib/content.php';
+$skills = ez_get_skills();
 foreach ($skills as $skillIndex => &$skill) {
   $skill['_source_index'] = $skillIndex;
 }

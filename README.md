@@ -24,9 +24,10 @@ The project is a modular PHP site with an internal admin panel. It is designed t
 ## Requirements
 
 - PHP 8.0 or newer is recommended.
+- PHP SQLite extension (`pdo_sqlite` / `php-sqlite3`).
 - A web server such as Nginx or Apache.
 - Write permissions for:
-  - `data/`
+  - `storage/`
   - `admin/config.php`
   - `assets/img/uploads/`
   - `assets/img/qr/`
@@ -57,7 +58,7 @@ git pull origin main
 If uploads or data saving fail, check permissions:
 
 ```bash
-sudo chown -R www-data:www-data data assets/img/uploads assets/img/qr admin/config.php
+sudo chown -R www-data:www-data storage assets/img/uploads assets/img/qr admin/config.php
 ```
 
 Use the web server user that matches your server setup. On some systems it may be `nginx`, `apache`, or another user instead of `www-data`.
@@ -85,7 +86,13 @@ The admin interface supports dark/light theme and uses fetch-based saving, so mo
 
 ## Content Data
 
-Current data is stored in PHP array files:
+Current editable content is stored in SQLite:
+
+```text
+storage/site.sqlite
+```
+
+On first run the database is created and seeded from the legacy PHP array files:
 
 ```text
 data/skills.php
@@ -96,7 +103,30 @@ data/settings.php
 data/tags.php
 ```
 
-This is intentional for the beta stage. A future version can migrate this data to SQLite.
+Those files are kept as a readable backup and fallback. If `pdo_sqlite` is missing or the database cannot be opened, the site can still read the old files.
+
+To create or refresh the SQLite file manually on the server:
+
+```bash
+php bin/migrate-sqlite.php
+```
+
+If you want the database outside the web root, set `SITE_DB_PATH` in PHP-FPM/Nginx/Apache, for example:
+
+```text
+SITE_DB_PATH=/var/lib/egor-zvada/site.sqlite
+```
+
+For Nginx, deny direct access to `/storage`:
+
+```nginx
+location ^~ /storage/ {
+  deny all;
+  return 404;
+}
+```
+
+Apache reads `storage/.htaccess`, which denies direct access there.
 
 ## Media
 
@@ -127,7 +157,8 @@ index.php                 Main page assembly
 partials/                 Head, header, footer, scripts, indicators
 sections/                 Hero, about, skills, projects, Tavrida, contacts
 admin/                    Admin panel and config
-data/                     Editable PHP array data
+data/                     Legacy seed/fallback PHP array data
+storage/                  SQLite database directory
 assets/css/               Theme, layout, components, sections, responsive styles
 assets/js/                Theme, navigation, admin behavior, project UI, motion
 assets/img/               Images, uploads, QR, project visuals
@@ -138,5 +169,5 @@ assets/svg/               Logo and skill icons
 
 - The site is still in beta.
 - Uploaded media should be backed up before destructive server operations.
-- The current admin is file-based. SQLite is the recommended next storage step when the data model grows.
+- The current admin writes content to SQLite when `pdo_sqlite` is available.
 - Three.js is loaded from CDN for the hero background. If it fails, the site falls back to canvas animation.
