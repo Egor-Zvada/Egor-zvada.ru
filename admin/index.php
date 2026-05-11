@@ -540,6 +540,11 @@ try {
       require_login();
       check_csrf();
 
+      $oldAbout = load_assoc($GLOBALS['aboutFile']);
+      $manualGallery = list_from_text((string) ($_POST['about_gallery'] ?? implode("\n", $oldAbout['gallery'] ?? [])));
+      $manualGallery = remove_deleted_assets($manualGallery, $_POST['delete_about_gallery'] ?? [], $GLOBALS['root']);
+      $uploadedGallery = save_multiple_uploads('about_gallery_uploads', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir']);
+
       $about = [
         'lead' => trim((string) ($_POST['about_lead'] ?? '')),
         'paragraphs' => list_from_lines((string) ($_POST['about_paragraphs'] ?? '')),
@@ -547,6 +552,7 @@ try {
         'visual_top_left' => trim((string) ($_POST['visual_top_left'] ?? '')),
         'visual_top_right' => trim((string) ($_POST['visual_top_right'] ?? '')),
         'visual_tags' => list_from_text((string) ($_POST['visual_tags'] ?? '')),
+        'gallery' => array_values(array_unique(array_merge($manualGallery, $uploadedGallery))),
       ];
 
       save_assoc($GLOBALS['aboutFile'], $about);
@@ -854,7 +860,22 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
             <label>Подпись fallback-анимации слева <input name="visual_top_left" value="<?= h($about['visual_top_left'] ?? '') ?>"></label>
             <label>Подпись fallback-анимации справа <input name="visual_top_right" value="<?= h($about['visual_top_right'] ?? '') ?>"></label>
             <label>Теги fallback-анимации <textarea name="visual_tags"><?= h(implode("\n", $about['visual_tags'] ?? [])) ?></textarea></label>
-            <p class="hint">Фото для правого блока загружается на сервер вручную: /assets/img/about/about.jpg</p>
+            <label>Фото в правом блоке, пути через запятую или с новой строки <textarea name="about_gallery"><?= h(implode("\n", $about['gallery'] ?? [])) ?></textarea></label>
+            <?php if (!empty($about['gallery'])): ?>
+              <div class="file-list" aria-label="Текущие фото блока обо мне">
+                <?php foreach ($about['gallery'] as $image): ?>
+                  <label class="file-list__item">
+                    <img src="<?= h($image) ?>" alt="">
+                    <code><?= h($image) ?></code>
+                    <?php if (is_uploaded_asset((string) $image)): ?>
+                      <span class="check"><input name="delete_about_gallery[]" type="checkbox" value="<?= h($image) ?>"> Удалить с сервера</span>
+                    <?php endif; ?>
+                  </label>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
+            <label>Загрузить фото <input name="about_gallery_uploads[]" type="file" accept="image/*,.svg" multiple></label>
+            <p class="hint">Если фото не загружены, сайт покажет старый fallback /assets/img/about/about.jpg, если файл есть.</p>
             <button class="primary" type="submit">Сохранить "Обо мне"</button>
           </form>
         </section>

@@ -1,8 +1,12 @@
 <?php $about = include __DIR__ . '/../data/about.php'; ?>
 <?php
-$aboutPhoto = '/assets/img/about/about.jpg';
-$aboutPhotoPath = __DIR__ . '/../assets/img/about/about.jpg';
-$hasAboutPhoto = is_file($aboutPhotoPath);
+$aboutGallery = array_values(array_filter($about['gallery'] ?? [], static fn($path) => is_string($path) && trim($path) !== ''));
+$fallbackAboutPhoto = '/assets/img/about/about.jpg';
+$fallbackAboutPhotoPath = __DIR__ . '/../assets/img/about/about.jpg';
+if (empty($aboutGallery) && is_file($fallbackAboutPhotoPath)) {
+  $aboutGallery[] = $fallbackAboutPhoto;
+}
+$hasAboutPhoto = !empty($aboutGallery);
 ?>
 
 <section class="section about" id="about" data-section="about">
@@ -31,13 +35,29 @@ $hasAboutPhoto = is_file($aboutPhotoPath);
         <span>about / photo</span>
       </div>
 
-      <div class="about-visual__photo-frame">
+      <div class="about-visual__photo-frame" data-about-gallery>
         <?php if ($hasAboutPhoto): ?>
-          <img class="about-visual__single-photo" src="<?= htmlspecialchars($aboutPhoto, ENT_QUOTES, 'UTF-8') ?>" alt="Егор Звада" loading="lazy">
+          <?php foreach ($aboutGallery as $index => $aboutPhoto): ?>
+            <img
+              class="about-visual__single-photo <?= $index === 0 ? 'is-active' : '' ?>"
+              src="<?= htmlspecialchars($aboutPhoto, ENT_QUOTES, 'UTF-8') ?>"
+              alt="Егор Звада"
+              loading="lazy"
+              data-about-slide
+              aria-hidden="<?= $index === 0 ? 'false' : 'true' ?>"
+            >
+          <?php endforeach; ?>
+          <?php if (count($aboutGallery) > 1): ?>
+            <div class="about-visual__controls" aria-label="Листать фото обо мне">
+              <button type="button" data-about-prev aria-label="Предыдущее фото">←</button>
+              <span data-about-counter>01 / <?= str_pad((string) count($aboutGallery), 2, '0', STR_PAD_LEFT) ?></span>
+              <button type="button" data-about-next aria-label="Следующее фото">→</button>
+            </div>
+          <?php endif; ?>
         <?php else: ?>
           <div class="about-visual__photo-placeholder">
             <span>upload</span>
-            <strong>/assets/img/about/about.jpg</strong>
+            <strong>admin / about / photos</strong>
           </div>
         <?php endif; ?>
       </div>
