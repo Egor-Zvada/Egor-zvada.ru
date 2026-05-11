@@ -20,12 +20,12 @@ $root = dirname(__DIR__);
 require_once $root . '/lib/content.php';
 
 $config = require __DIR__ . '/config.php';
-$skillsFile = $root . '/data/skills.php';
-$projectsFile = $root . '/data/projects.php';
-$settingsFile = $root . '/data/settings.php';
-$contactsFile = $root . '/data/contacts.php';
-$aboutFile = $root . '/data/about.php';
-$tagsFile = $root . '/data/tags.php';
+$skillsFile = 'skills.php';
+$projectsFile = 'projects.php';
+$settingsFile = 'settings.php';
+$contactsFile = 'contacts.php';
+$aboutFile = 'about.php';
+$tagsFile = 'tags.php';
 $skillUploadWebDir = '/assets/img/uploads/skills';
 $skillUploadFsDir = $root . $skillUploadWebDir;
 $projectUploadWebDir = '/assets/img/uploads/projects';
@@ -100,8 +100,12 @@ function load_assoc(string $file): array {
 }
 
 function save_items(string $file, array $items): void {
-  if (ez_save_items_for_file($file, $items)) {
-    return;
+  if (in_array(basename($file), ['skills.php', 'projects.php'], true)) {
+    if (ez_save_items_for_file($file, $items)) {
+      return;
+    }
+
+    throw new RuntimeException('Не получилось сохранить данные в SQLite.');
   }
 
   $export = var_export(array_values($items), true);
@@ -112,8 +116,12 @@ function save_items(string $file, array $items): void {
 }
 
 function save_assoc(string $file, array $items): void {
-  if (ez_save_assoc_for_file($file, $items)) {
-    return;
+  if (in_array(basename($file), ['settings.php', 'contacts.php', 'about.php', 'tags.php'], true)) {
+    if (ez_save_assoc_for_file($file, $items)) {
+      return;
+    }
+
+    throw new RuntimeException('Не получилось сохранить данные в SQLite.');
   }
 
   $export = var_export($items, true);
@@ -147,6 +155,14 @@ function is_video_asset(string $path): bool {
   return in_array($extension, ['mp4', 'webm', 'mov', 'm4v'], true);
 }
 
+function is_default_skill_icon(string $path): bool {
+  return ez_normalize_asset_path($path) === ez_default_skill_icon_path();
+}
+
+function is_default_project_image(string $path): bool {
+  return ez_normalize_asset_path($path) === ez_default_project_image_path();
+}
+
 function delete_uploaded_asset(string $path, string $root): void {
   if (!is_uploaded_asset($path)) {
     return;
@@ -174,14 +190,6 @@ function remove_deleted_assets(array $paths, array $deletedPaths, string $root):
   }
 
   return array_values(array_filter($paths, static fn($path) => !in_array($path, $deletedPaths, true)));
-}
-
-function default_skill_icon(string $title, string $fallback = ''): string {
-  if ($fallback !== '') {
-    return ez_normalize_asset_path($fallback) ?: ez_default_skill_icon_path();
-  }
-
-  return ez_default_skill_icon_path();
 }
 
 function list_from_text(string $value): array {
@@ -436,12 +444,12 @@ try {
       $old = $index !== null && isset($skills[$index]) ? $skills[$index] : [];
       $oldIcon = (string) ($old['icon'] ?? '');
       $title = trim((string) ($_POST['title'] ?? ''));
-      $defaultIcon = default_skill_icon($title, (string) ($old['default_icon'] ?? (is_uploaded_asset($oldIcon) ? '' : $oldIcon)));
-      $icon = trim((string) ($_POST['icon'] ?? $oldIcon));
+      $defaultIcon = ez_default_skill_icon_path();
+      $icon = $oldIcon !== '' ? $oldIcon : $defaultIcon;
 
       if (!empty($_POST['delete_icon'])) {
         delete_uploaded_asset($oldIcon, $GLOBALS['root']);
-        $icon = $defaultIcon ?: default_skill_icon($title);
+        $icon = $defaultIcon;
       }
 
       $icon = save_upload('icon_upload', $GLOBALS['skillUploadFsDir'], $GLOBALS['skillUploadWebDir'], $icon);
@@ -493,8 +501,8 @@ try {
       $index = $indexValue === '' ? null : (int) $indexValue;
       $old = $index !== null && isset($projects[$index]) ? $projects[$index] : [];
       $title = trim((string) ($_POST['title'] ?? ''));
-      $manualGallery = list_from_text((string) ($_POST['gallery'] ?? ''));
-      $manualGallery = remove_deleted_assets($manualGallery, $_POST['delete_gallery'] ?? [], $GLOBALS['root']);
+      $deletedGallery = $_POST['delete_gallery'] ?? [];
+      $existingGallery = remove_deleted_assets(list_from_array($_POST['gallery_existing'] ?? []), $deletedGallery, $GLOBALS['root']);
       $uploadedGallery = save_multiple_uploads(
         'gallery_uploads',
         $GLOBALS['projectUploadFsDir'],
@@ -505,34 +513,14 @@ try {
       );
       $oldImage = (string) ($old['image'] ?? '');
       $oldVideo = (string) ($old['video'] ?? '');
-      $defaultImage = (string) ($old['default_image'] ?? (is_uploaded_asset($oldImage) ? '' : $oldImage));
-      $image = trim((string) ($_POST['image'] ?? $oldImage));
-      $video = trim((string) ($_POST['video'] ?? $oldVideo));
-
-      if (!empty($_POST['delete_image'])) {
-        delete_uploaded_asset($oldImage, $GLOBALS['root']);
-        $image = $defaultImage;
-        $manualGallery = array_values(array_filter($manualGallery, static fn($path) => $path !== $oldImage));
-      }
-
-      if ($oldImage !== '' && in_array($oldImage, $_POST['delete_gallery'] ?? [], true)) {
-        $image = $defaultImage;
-      }
-
-      $image = save_upload('image_upload', $GLOBALS['projectUploadFsDir'], $GLOBALS['projectUploadWebDir'], $image);
-      if (!empty($_POST['delete_video'])) {
-        delete_uploaded_asset($oldVideo, $GLOBALS['root']);
-        $video = '';
-        $manualGallery = array_values(array_filter($manualGallery, static fn($path) => $path !== $oldVideo));
-      }
-      if ($oldVideo !== '' && in_array($oldVideo, $_POST['delete_gallery'] ?? [], true)) {
-        $video = '';
-      }
-      $video = save_upload(
+      $defaultImage = ez_default_project_image_path();
+      $selectedImage = trim((string) ($_POST['primary_image'] ?? ''));
+      $imageUpload = save_upload('image_upload', $GLOBALS['projectUploadFsDir'], $GLOBALS['projectUploadWebDir']);
+      $videoUpload = save_upload(
         'video_upload',
         $GLOBALS['projectUploadFsDir'],
         $GLOBALS['projectUploadWebDir'],
-        $video,
+        '',
         true,
         $GLOBALS['projectVideoUploadFsDir'],
         $GLOBALS['projectVideoUploadWebDir']
@@ -550,10 +538,15 @@ try {
         'category_label' => trim((string) ($_POST['category_label'] ?? '')) ?: ($projectCategories[$category] ?? $category),
         'description' => trim((string) ($_POST['description'] ?? '')),
         'full_description' => trim((string) ($_POST['full_description'] ?? '')),
-        'image' => $image,
+        'image' => '',
         'default_image' => $defaultImage,
-        'gallery' => array_values(array_unique(array_merge($manualGallery, $uploadedGallery))),
-        'video' => $video ?: null,
+        'gallery' => array_values(array_unique(array_filter(array_merge(
+          $existingGallery,
+          $uploadedGallery,
+          $imageUpload !== '' ? [$imageUpload] : [],
+          $videoUpload !== '' ? [$videoUpload] : []
+        )))),
+        'video' => null,
         'tags' => array_values(array_unique(array_merge(
           list_from_array($_POST['tags_select'] ?? []),
           list_from_text((string) ($_POST['tags'] ?? ''))
@@ -565,7 +558,7 @@ try {
         throw new RuntimeException('У проекта должно быть название.');
       }
 
-      $hasUploadedProjectMedia = is_uploaded_asset((string) $item['image']);
+      $hasUploadedProjectMedia = $imageUpload !== '' || $videoUpload !== '';
       foreach ($item['gallery'] as $galleryImage) {
         if (is_uploaded_asset((string) $galleryImage)) {
           $hasUploadedProjectMedia = true;
@@ -577,17 +570,37 @@ try {
         $item['gallery'] = array_values(array_filter($item['gallery'], static function ($path) {
           return !is_project_placeholder_asset((string) $path);
         }));
-
-        if (is_project_placeholder_asset((string) $item['image'])) {
-          $item['image'] = $item['gallery'][0] ?? '';
-        }
       }
 
-      if ($item['image'] !== '' && !in_array($item['image'], $item['gallery'], true)) {
+      $imageCandidates = array_values(array_filter($item['gallery'], static fn($path) => !is_video_asset((string) $path)));
+      if ($imageUpload !== '') {
+        $item['image'] = $imageUpload;
+      } elseif ($selectedImage !== '' && in_array($selectedImage, $imageCandidates, true)) {
+        $item['image'] = $selectedImage;
+      } elseif ($oldImage !== '' && !in_array($oldImage, (array) $deletedGallery, true) && in_array($oldImage, $imageCandidates, true)) {
+        $item['image'] = $oldImage;
+      } else {
+        $item['image'] = $imageCandidates[0] ?? $defaultImage;
+      }
+
+      $videoCandidates = array_values(array_filter($item['gallery'], static fn($path) => is_video_asset((string) $path)));
+      if ($videoUpload !== '') {
+        $item['video'] = $videoUpload;
+      } elseif ($oldVideo !== '' && !in_array($oldVideo, (array) $deletedGallery, true) && in_array($oldVideo, $videoCandidates, true)) {
+        $item['video'] = $oldVideo;
+      } else {
+        $item['video'] = $videoCandidates[0] ?? null;
+      }
+
+      if ($item['image'] !== '' && !is_default_project_image($item['image']) && !in_array($item['image'], $item['gallery'], true)) {
         array_unshift($item['gallery'], $item['image']);
       }
       if (!empty($item['video']) && !in_array($item['video'], $item['gallery'], true)) {
         $item['gallery'][] = $item['video'];
+      }
+
+      if (empty($item['gallery'])) {
+        $item['gallery'] = [$item['image']];
       }
 
       if ($index === null) {
@@ -642,8 +655,7 @@ try {
       check_csrf();
 
       $oldAbout = load_assoc($GLOBALS['aboutFile']);
-      $manualGallery = list_from_text((string) ($_POST['about_gallery'] ?? implode("\n", $oldAbout['gallery'] ?? [])));
-      $manualGallery = remove_deleted_assets($manualGallery, $_POST['delete_about_gallery'] ?? [], $GLOBALS['root']);
+      $existingGallery = remove_deleted_assets(list_from_array($_POST['about_gallery_existing'] ?? []), $_POST['delete_about_gallery'] ?? [], $GLOBALS['root']);
       $uploadedGallery = save_multiple_uploads('about_gallery_uploads', $GLOBALS['aboutUploadFsDir'], $GLOBALS['aboutUploadWebDir']);
 
       $about = [
@@ -653,7 +665,7 @@ try {
         'visual_top_left' => trim((string) ($_POST['visual_top_left'] ?? '')),
         'visual_top_right' => trim((string) ($_POST['visual_top_right'] ?? '')),
         'visual_tags' => list_from_text((string) ($_POST['visual_tags'] ?? '')),
-        'gallery' => array_values(array_unique(array_merge($manualGallery, $uploadedGallery))),
+        'gallery' => array_values(array_unique(array_merge($existingGallery, $uploadedGallery))),
       ];
 
       save_assoc($GLOBALS['aboutFile'], $about);
@@ -756,11 +768,15 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
     .row strong { display: block; }
     .row span { display: block; color: var(--muted); font-size: 13px; }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .file-list { display: grid; gap: 8px; margin: -4px 0 12px; }
-    .file-list__item { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); background: var(--row); }
-    .file-list__item img, .file-list__item video, .file-list__video-thumb { width: 44px; height: 44px; object-fit: contain; border: 1px solid var(--line); background: var(--image-bg); }
+    .file-list { display: grid; gap: 10px; margin: -4px 0 12px; }
+    .file-list__item { display: grid; grid-template-columns: 72px 1fr auto; gap: 12px; align-items: center; padding: 10px; border: 1px solid var(--line); background: var(--row); }
+    .file-list__item img, .file-list__item video, .file-list__video-thumb { width: 72px; height: 54px; object-fit: contain; border: 1px solid var(--line); background: var(--image-bg); }
     .file-list__video-thumb { display: grid; place-items: center; color: var(--muted); font: 10px/1 var(--font-mono, monospace); text-transform: uppercase; }
-    .file-list__item code { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .file-list__body { display: grid; gap: 6px; color: var(--text); }
+    .file-list__meta { color: var(--muted); font-size: 12px; }
+    .file-list__empty { padding: 14px; border: 1px dashed var(--line); color: var(--muted); background: var(--field); }
+    .upload-preview { display: grid; gap: 8px; margin: -4px 0 12px; }
+    .upload-preview:empty { display: none; }
     form { margin: 0; }
     label { display: grid; gap: 6px; margin-bottom: 12px; color: var(--muted); font-size: 13px; }
     input, textarea, select { width: 100%; border: 1px solid var(--line); background: var(--field); color: var(--text); padding: 10px 12px; font: inherit; }
@@ -801,8 +817,8 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
       .actions .button, .actions button { width: 100%; }
       .panel-head, .form-actions { align-items: stretch; flex-direction: column; }
       .panel-head .button, .form-actions .button, .form-actions button { width: 100%; }
-      .file-list__item { grid-template-columns: 44px 1fr; }
-      .file-list__item .check { grid-column: 1 / -1; }
+      .file-list__item { grid-template-columns: 72px 1fr; }
+      .file-list__item .check, .file-list__item .media-choice { grid-column: 1 / -1; }
       .tag-manager__add, .category-row { grid-template-columns: 1fr; }
       .panel { padding: 14px; }
     }
@@ -826,7 +842,6 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
       <header class="top">
         <div>
           <div class="brand">egor_zvada / admin</div>
-          <div class="hint">Загрузки раскладываются по папкам: about, projects, skills и video/uploads/projects</div>
         </div>
         <div class="nav">
           <a class="<?= $tab === 'skills' ? 'is-active' : '' ?>" href="/admin/?tab=skills">Навыки</a>
@@ -962,23 +977,28 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
             <label>Подпись fallback-анимации слева <input name="visual_top_left" value="<?= h($about['visual_top_left'] ?? '') ?>"></label>
             <label>Подпись fallback-анимации справа <input name="visual_top_right" value="<?= h($about['visual_top_right'] ?? '') ?>"></label>
             <label>Теги fallback-анимации <textarea name="visual_tags"><?= h(implode("\n", $about['visual_tags'] ?? [])) ?></textarea></label>
-            <label>Фото в правом блоке, пути через запятую или с новой строки <textarea name="about_gallery"><?= h(implode("\n", $about['gallery'] ?? [])) ?></textarea></label>
             <?php if (!empty($about['gallery'])): ?>
               <div class="file-list" aria-label="Текущие фото блока обо мне">
-                <?php foreach ($about['gallery'] as $image): ?>
+                <?php foreach ($about['gallery'] as $aboutImageIndex => $image): ?>
                   <label class="file-list__item">
                     <img src="<?= h($image) ?>" alt="">
-                    <code><?= h($image) ?></code>
+                    <span class="file-list__body">
+                      <strong>Фото <?= $aboutImageIndex + 1 ?></strong>
+                      <span class="file-list__meta">Загружено</span>
+                    </span>
+                    <input type="hidden" name="about_gallery_existing[]" value="<?= h($image) ?>">
                     <?php if (is_uploaded_asset((string) $image)): ?>
                       <span class="check"><input name="delete_about_gallery[]" type="checkbox" value="<?= h($image) ?>"> Удалить с сервера</span>
                     <?php endif; ?>
                   </label>
                 <?php endforeach; ?>
               </div>
-            <?php endif; ?>
-            <label>Загрузить фото <input name="about_gallery_uploads[]" type="file" accept="image/*,.svg" multiple></label>
-            <p class="hint">Загрузки сохраняются в /assets/img/uploads/about.</p>
-            <button class="primary" type="submit">Сохранить "Обо мне"</button>
+              <?php else: ?>
+                <div class="file-list__empty">Фото пока не загружены.</div>
+              <?php endif; ?>
+              <label>Загрузить фото <input name="about_gallery_uploads[]" type="file" accept="image/*,.svg" multiple></label>
+              <div class="upload-preview" data-upload-preview></div>
+              <button class="primary" type="submit">Сохранить "Обо мне"</button>
           </form>
         </section>
       <?php elseif ($tab === 'projects'): ?>
@@ -1038,35 +1058,48 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               <label>Название категории <input name="category_label" value="<?= h($editProject['category_label'] ?? '') ?>" placeholder="event tech"></label>
               <label>Краткое описание <textarea name="description" required><?= h($editProject['description'] ?? '') ?></textarea></label>
               <label>Полное описание <textarea name="full_description"><?= h($editProject['full_description'] ?? '') ?></textarea></label>
-              <label>Главная картинка, путь <input name="image" value="<?= h($editProject['image'] ?? '') ?>" placeholder="/assets/img/projects/ai.svg"></label>
-              <?php if (!empty($editProject['image']) && is_uploaded_asset((string) $editProject['image'])): ?>
-                <label class="check"><input name="delete_image" type="checkbox" value="1"> Удалить главную картинку с сервера и вернуть дефолт</label>
-              <?php endif; ?>
               <label>Загрузить главную картинку <input name="image_upload" type="file" accept="image/*,.svg"></label>
-              <label>Галерея, пути через запятую или с новой строки <textarea name="gallery"><?= h(implode("\n", $editProject['gallery'] ?? [])) ?></textarea></label>
-              <?php if (!empty($editProject['gallery'])): ?>
+              <div class="upload-preview" data-upload-preview></div>
+              <?php
+                $projectGallery = array_values($editProject['gallery'] ?? []);
+                $projectImage = (string) ($editProject['image'] ?? '');
+                $projectVideo = (string) ($editProject['video'] ?? '');
+                if ($projectImage !== '' && !in_array($projectImage, $projectGallery, true)) {
+                  array_unshift($projectGallery, $projectImage);
+                }
+                if ($projectVideo !== '' && !in_array($projectVideo, $projectGallery, true)) {
+                  $projectGallery[] = $projectVideo;
+                }
+              ?>
+              <?php if (!empty($projectGallery)): ?>
                 <div class="file-list" aria-label="Текущая галерея проекта">
-                  <?php foreach ($editProject['gallery'] as $image): ?>
+                  <?php foreach ($projectGallery as $mediaIndex => $image): ?>
                     <label class="file-list__item">
                       <?php if (is_video_asset((string) $image)): ?>
                         <span class="file-list__video-thumb">video</span>
                       <?php else: ?>
                         <img src="<?= h($image) ?>" alt="">
                       <?php endif; ?>
-                      <code><?= h($image) ?></code>
-                      <?php if (is_uploaded_asset((string) $image)): ?>
-                        <span class="check"><input name="delete_gallery[]" type="checkbox" value="<?= h($image) ?>"> Удалить</span>
-                      <?php endif; ?>
+                      <span class="file-list__body">
+                        <strong><?= is_video_asset((string) $image) ? 'Видео' : 'Фото' ?> <?= $mediaIndex + 1 ?></strong>
+                        <?php if (!is_video_asset((string) $image)): ?>
+                          <span class="media-choice"><input name="primary_image" type="radio" value="<?= h($image) ?>" <?= ($projectImage === $image || ($projectImage === '' && $mediaIndex === 0)) ? 'checked' : '' ?>> Главная картинка</span>
+                        <?php else: ?>
+                          <span class="file-list__meta">Видео в галерее</span>
+                        <?php endif; ?>
+                      </span>
+                      <input type="hidden" name="gallery_existing[]" value="<?= h($image) ?>">
+                      <span class="check"><input name="delete_gallery[]" type="checkbox" value="<?= h($image) ?>" <?= !is_uploaded_asset((string) $image) ? 'disabled' : '' ?>> Удалить</span>
                     </label>
                   <?php endforeach; ?>
                 </div>
+              <?php else: ?>
+                <div class="file-list__empty">Медиа пока не загружены. Будет показана дефолтная картинка проекта.</div>
               <?php endif; ?>
               <label>Дозагрузить фото/видео в галерею <input name="gallery_uploads[]" type="file" accept="image/*,.svg,video/mp4,video/webm,video/quicktime,.mov,.m4v" multiple></label>
-              <label>Видео, путь или URL <input name="video" value="<?= h($editProject['video'] ?? '') ?>"></label>
-              <?php if (!empty($editProject['video']) && is_uploaded_asset((string) $editProject['video'])): ?>
-                <label class="check"><input name="delete_video" type="checkbox" value="1"> Удалить видео с сервера</label>
-              <?php endif; ?>
+              <div class="upload-preview" data-upload-preview></div>
               <label>Загрузить видео <input name="video_upload" type="file" accept="video/mp4,video/webm,video/quicktime,.mov,.m4v"></label>
+              <div class="upload-preview" data-upload-preview></div>
               <label>Теги из списка</label>
               <div class="tag-picker" aria-label="Теги проекта">
                   <?php foreach ($projectTags as $tag): ?>
@@ -1125,11 +1158,21 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               <label>Название <input name="title" value="<?= h($editSkill['title'] ?? '') ?>" required></label>
               <label>Номер в списке <input name="order" type="number" min="1" value="<?= h($editSkill['order'] ?? ($editSkillIndex !== '' ? ((int) $editSkillIndex + 1) : count($skills) + 1)) ?>" required></label>
               <label>Описание <textarea name="description" required><?= h($editSkill['description'] ?? '') ?></textarea></label>
-              <label>Иконка, путь <input name="icon" value="<?= h($editSkill['icon'] ?? '') ?>" placeholder="/assets/svg/icons/ai.svg"></label>
+              <?php $skillIcon = (string) ($editSkill['icon'] ?? ez_default_skill_icon_path()); ?>
+              <div class="file-list" aria-label="Иконка навыка">
+                <label class="file-list__item">
+                  <img src="<?= h($skillIcon) ?>" alt="">
+                  <span class="file-list__body">
+                    <strong><?= is_default_skill_icon($skillIcon) ? 'Дефолтная иконка' : 'Загруженная иконка' ?></strong>
+                    <span class="file-list__meta"><?= is_default_skill_icon($skillIcon) ? 'Можно загрузить свою' : 'Отображается на сайте' ?></span>
+                  </span>
+                </label>
+              </div>
               <?php if (!empty($editSkill['icon']) && is_uploaded_asset((string) $editSkill['icon'])): ?>
                 <label class="check"><input name="delete_icon" type="checkbox" value="1"> Удалить загруженную иконку с сервера и вернуть дефолт</label>
               <?php endif; ?>
               <label>Загрузить иконку/картинку <input name="icon_upload" type="file" accept="image/*,.svg"></label>
+              <div class="upload-preview" data-upload-preview></div>
               <label class="check"><input name="invert_icon" type="checkbox" value="1" <?= $editSkillInvertIcon ? 'checked' : '' ?>> Инвертировать иконку под светлую/тёмную тему</label>
               <label>Уровень / подпись <input name="level" value="<?= h($editSkill['level'] ?? '') ?>" placeholder="system admin"></label>
               <label>Категория <input name="category" value="<?= h($editSkill['category'] ?? '') ?>" placeholder="Системы"></label>
@@ -1232,6 +1275,55 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
           event.preventDefault();
           addTagFromManager(input.closest('[data-tag-manager]'));
         }
+      });
+    })();
+
+    (() => {
+      const renderPreview = (input) => {
+        const label = input.closest('label');
+        const preview = label?.nextElementSibling?.matches('[data-upload-preview]')
+          ? label.nextElementSibling
+          : null;
+        if (!preview) return;
+
+        preview.innerHTML = '';
+        [...input.files].forEach((file, index) => {
+          const item = document.createElement('div');
+          item.className = 'file-list__item';
+
+          const isVideo = file.type.startsWith('video/');
+          if (isVideo) {
+            const thumb = document.createElement('span');
+            thumb.className = 'file-list__video-thumb';
+            thumb.textContent = 'video';
+            item.append(thumb);
+          } else {
+            const image = document.createElement('img');
+            image.alt = '';
+            image.src = URL.createObjectURL(file);
+            image.onload = () => URL.revokeObjectURL(image.src);
+            item.append(image);
+          }
+
+          const body = document.createElement('span');
+          body.className = 'file-list__body';
+
+          const title = document.createElement('strong');
+          title.textContent = `${isVideo ? 'Видео' : 'Фото'} ${index + 1}`;
+
+          const meta = document.createElement('span');
+          meta.className = 'file-list__meta';
+          meta.textContent = 'Будет загружено после сохранения';
+
+          body.append(title, meta);
+          item.append(body);
+          preview.append(item);
+        });
+      };
+
+      document.addEventListener('change', (event) => {
+        const input = event.target.closest('input[type="file"]');
+        if (input) renderPreview(input);
       });
     })();
 

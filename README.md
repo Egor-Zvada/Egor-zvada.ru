@@ -88,26 +88,15 @@ The admin interface supports dark/light theme and uses fetch-based saving, so mo
 
 ## Content Data
 
-Current editable content is stored in SQLite:
+Editable content is stored in SQLite:
 
 ```text
 storage/site.sqlite
 ```
 
-On first run the database is created and seeded from the legacy PHP array files:
+The site expects SQLite to be available. There is no runtime PHP-array fallback for content.
 
-```text
-data/skills.php
-data/projects.php
-data/about.php
-data/contacts.php
-data/settings.php
-data/tags.php
-```
-
-Those files are kept as a readable backup and fallback. If `pdo_sqlite` is missing or the database cannot be opened, the site can still read the old files.
-
-To create or refresh the SQLite file manually on the server:
+To create the SQLite schema manually on the server:
 
 ```bash
 php bin/migrate-sqlite.php
@@ -117,6 +106,18 @@ To move old uploaded files from the flat upload folder into typed folders and up
 
 ```bash
 php bin/normalize-assets.php
+```
+
+To create a readable content backup from SQLite:
+
+```bash
+php bin/backup-sqlite.php
+```
+
+Weekly cron example:
+
+```cron
+15 4 * * 1 cd /var/www/egor-zvada.ru && php bin/backup-sqlite.php
 ```
 
 If you want the database outside the web root, set `SITE_DB_PATH` in PHP-FPM/Nginx/Apache, for example:
@@ -171,7 +172,6 @@ index.php                 Main page assembly
 partials/                 Head, header, footer, scripts, indicators
 sections/                 Hero, about, skills, projects, Tavrida, contacts
 admin/                    Admin panel and config
-data/                     Legacy seed/fallback PHP array data
 storage/                  SQLite database directory
 assets/css/               Theme, layout, components, sections, responsive styles
 assets/js/                Theme, navigation, admin behavior, project UI, motion
@@ -186,5 +186,5 @@ assets/svg/icons/         Single skill fallback icon
 
 - The site is still in beta.
 - Uploaded media should be backed up before destructive server operations.
-- The current admin writes content to SQLite when `pdo_sqlite` is available.
+- The admin writes content to SQLite.
 - Three.js is loaded from CDN for the hero background. If it fails, the site falls back to canvas animation.

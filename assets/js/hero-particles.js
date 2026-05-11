@@ -115,7 +115,7 @@
       return { particles: CONFIG.particlesHigh, dpr: 1.15, speed: 1 };
     };
 
-    const particleColor = () => 0xffffff;
+    const particleColor = () => (M.isLightTheme() ? 0x5f625f : 0xffffff);
 
     function updateScrollVelocity() {
       const current = window.scrollY;
@@ -631,8 +631,10 @@
       return { density: 1, speed: 1, dpr: 2 };
     };
 
-    function whiteInk(alpha) {
-      return `rgba(255, 255, 255, ${alpha})`;
+    function particleInk(alpha) {
+      return M.isLightTheme()
+        ? `rgba(72, 75, 72, ${alpha})`
+        : `rgba(255, 255, 255, ${alpha})`;
     }
 
     function resize() {
@@ -764,7 +766,7 @@
         Math.max(width, height) * 0.62
       );
 
-      glow.addColorStop(0, whiteInk(M.isLightTheme() ? 0.05 : 0.08));
+      glow.addColorStop(0, particleInk(M.isLightTheme() ? 0.09 : 0.08));
       glow.addColorStop(1, 'rgba(0,0,0,0)');
 
       ctx.fillStyle = glow;
@@ -787,7 +789,7 @@
 
         const isGuide = y % 6 === 0;
 
-        ctx.strokeStyle = isGuide ? whiteInk(0.18) : whiteInk(0.08);
+        ctx.strokeStyle = isGuide ? particleInk(0.18) : particleInk(0.08);
         ctx.lineWidth = isGuide ? 1.1 : 0.6;
         ctx.globalAlpha = isGuide ? 0.36 : 0.22;
         ctx.stroke();
@@ -803,13 +805,13 @@
           else ctx.lineTo(p.x, p.y);
         }
 
-        ctx.strokeStyle = whiteInk(0.07);
+        ctx.strokeStyle = particleInk(0.07);
         ctx.lineWidth = 0.55;
         ctx.globalAlpha = 0.18;
         ctx.stroke();
       }
 
-      ctx.fillStyle = whiteInk(0.5);
+      ctx.fillStyle = particleInk(0.5);
 
       for (let i = 0; i < mapped.length; i += level === 'low' ? 11 : 7) {
         const p = mapped[i];

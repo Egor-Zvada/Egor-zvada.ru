@@ -110,23 +110,26 @@ function ez_db_available(): bool {
     && in_array('sqlite', PDO::getAvailableDrivers(), true);
 }
 
-function ez_db(): ?PDO {
+function ez_db(): PDO {
   static $pdo = null;
   static $initialized = false;
 
   if ($initialized) {
+    if (!$pdo) {
+      throw new RuntimeException('SQLite database is not available.');
+    }
     return $pdo;
   }
 
   $initialized = true;
   if (!ez_db_available()) {
-    return null;
+    throw new RuntimeException('PDO SQLite is not available. Install or enable php-sqlite3.');
   }
 
   $path = ez_db_path();
   $dir = dirname($path);
   if (!is_dir($dir) && !mkdir($dir, 0775, true)) {
-    return null;
+    throw new RuntimeException('Could not create SQLite storage directory.');
   }
 
   $pdo = new PDO('sqlite:' . $path);
@@ -263,14 +266,43 @@ function ez_db_migrate(PDO $pdo): void {
   ");
 }
 
-function ez_seed_file(string $name, array $fallback = []): array {
-  $file = ez_root() . '/data/' . $name . '.php';
-  if (!is_file($file)) {
-    return $fallback;
-  }
-
-  $items = require $file;
-  return is_array($items) ? $items : $fallback;
+function ez_default_seed(string $name): array {
+  return match ($name) {
+    'settings' => [
+      'version' => '0.3-beta',
+      'admin_clicks' => 10,
+    ],
+    'contacts' => [
+      'email' => '',
+      'telegram' => '',
+      'telegram_url' => '',
+      'location' => '',
+      'timezone' => '',
+      'site' => '',
+      'qr_label' => '',
+    ],
+    'about' => [
+      'lead' => '',
+      'paragraphs' => [],
+      'focus' => '',
+      'visual_top_left' => 'portrait',
+      'visual_top_right' => 'about / photo',
+      'visual_tags' => [],
+      'gallery' => [],
+    ],
+    'tags' => [
+      'skill_tags' => [],
+      'project_tags' => [],
+      'project_categories' => [
+        'event' => 'event',
+        'interactive' => 'interactive',
+        'systems' => 'systems',
+        'video' => 'video',
+        'ai' => 'ai',
+      ],
+    ],
+    default => [],
+  };
 }
 
 function ez_db_seed_if_empty(PDO $pdo): void {
@@ -281,12 +313,12 @@ function ez_db_seed_if_empty(PDO $pdo): void {
     return;
   }
 
-  ez_save_settings(ez_seed_file('settings'), $pdo);
-  ez_save_contacts(ez_seed_file('contacts'), $pdo);
-  ez_save_about(ez_seed_file('about'), $pdo);
-  ez_save_skills(ez_seed_file('skills'), $pdo);
-  ez_save_projects(ez_seed_file('projects'), $pdo);
-  ez_save_tags(ez_seed_file('tags'), $pdo);
+  ez_save_settings(ez_default_seed('settings'), $pdo);
+  ez_save_contacts(ez_default_seed('contacts'), $pdo);
+  ez_save_about(ez_default_seed('about'), $pdo);
+  ez_save_skills(ez_default_seed('skills'), $pdo);
+  ez_save_projects(ez_default_seed('projects'), $pdo);
+  ez_save_tags(ez_default_seed('tags'), $pdo);
 }
 
 function ez_kv_all(string $table, ?PDO $pdo = null): array {
@@ -319,7 +351,7 @@ function ez_replace_kv(string $table, array $items, ?PDO $pdo = null): void {
 
 function ez_get_settings(): array {
   $pdo = ez_db();
-  return $pdo ? ez_kv_all('settings', $pdo) : ez_seed_file('settings');
+  return ez_kv_all('settings', $pdo);
 }
 
 function ez_save_settings(array $items, ?PDO $pdo = null): void {
@@ -328,7 +360,7 @@ function ez_save_settings(array $items, ?PDO $pdo = null): void {
 
 function ez_get_contacts(): array {
   $pdo = ez_db();
-  return $pdo ? ez_kv_all('contacts', $pdo) : ez_seed_file('contacts');
+  return ez_kv_all('contacts', $pdo);
 }
 
 function ez_save_contacts(array $items, ?PDO $pdo = null): void {
@@ -337,7 +369,6 @@ function ez_save_contacts(array $items, ?PDO $pdo = null): void {
 
 function ez_get_about(): array {
   $pdo = ez_db();
-  if (!$pdo) return ez_seed_file('about');
 
   $row = $pdo->query('SELECT * FROM about WHERE id = 1')->fetch();
   if (!$row) return [];
@@ -383,7 +414,6 @@ function ez_save_about(array $about, ?PDO $pdo = null): void {
 
 function ez_get_skills(): array {
   $pdo = ez_db();
-  if (!$pdo) return array_values(ez_seed_file('skills'));
 
   $rows = $pdo->query('SELECT * FROM skills ORDER BY sort_order ASC, id ASC')->fetchAll();
   return array_map(static function (array $row): array {
@@ -431,7 +461,6 @@ function ez_save_skills(array $skills, ?PDO $pdo = null): void {
 
 function ez_get_projects(): array {
   $pdo = ez_db();
-  if (!$pdo) return array_values(ez_seed_file('projects'));
 
   $rows = $pdo->query('SELECT * FROM projects ORDER BY date DESC, id DESC')->fetchAll();
   return array_map(static function (array $row): array {
@@ -487,7 +516,6 @@ function ez_save_projects(array $projects, ?PDO $pdo = null): void {
 
 function ez_get_tags(): array {
   $pdo = ez_db();
-  if (!$pdo) return ez_seed_file('tags');
 
   $rows = $pdo->query('SELECT * FROM tags ORDER BY type ASC, sort_order ASC, id ASC')->fetchAll();
   $tags = [
@@ -587,9 +615,6 @@ function ez_load_assoc_for_file(string $file): array {
 
 function ez_save_items_for_file(string $file, array $items): bool {
   $pdo = ez_db();
-  if (!$pdo) {
-    return false;
-  }
 
   switch (basename($file)) {
     case 'skills.php':
@@ -605,9 +630,6 @@ function ez_save_items_for_file(string $file, array $items): bool {
 
 function ez_save_assoc_for_file(string $file, array $items): bool {
   $pdo = ez_db();
-  if (!$pdo) {
-    return false;
-  }
 
   switch (basename($file)) {
     case 'settings.php':
