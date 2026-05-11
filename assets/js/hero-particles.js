@@ -38,6 +38,7 @@
       // Если лицо/тёмные детали пропадают — опусти до 0.12–0.18.
       brightnessThreshold: 0.18,
       brightnessContrast: 2.8,
+      edgeContrast: 3.6,
 
       // Общая яркость в режиме камеры.
       cameraOpacityDark: 0.58,
@@ -215,9 +216,7 @@
       return usable > 18 && contrast > 3.2;
     }
 
-    function cameraBrightnessAt(u, v) {
-      if (!cameraPixels || !cameraHasUsefulImage) return 0;
-
+    function cameraPixelLight(u, v) {
       const wrappedU = ((u % 1) + 1) % 1;
       const clampedV = M.clamp(v, 0, 1);
 
@@ -232,19 +231,46 @@
       );
 
       const index = (y * cameraSample.width + x) * 4;
-
       const r = cameraPixels[index] || 0;
       const g = cameraPixels[index + 1] || 0;
       const b = cameraPixels[index + 2] || 0;
 
-      let light = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+      return (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+    }
+
+    function cameraBrightnessAt(u, v) {
+      if (!cameraPixels || !cameraHasUsefulImage) return 0;
+
+      const wrappedU = ((u % 1) + 1) % 1;
+      const clampedV = M.clamp(v, 0, 1);
+      const x = Math.min(
+        cameraSample.width - 1,
+        Math.max(0, Math.floor(wrappedU * cameraSample.width))
+      );
+      const y = Math.min(
+        cameraSample.height - 1,
+        Math.max(0, Math.floor(clampedV * cameraSample.height))
+      );
+      let light = cameraPixelLight(wrappedU, clampedV);
+      const horizontal = Math.abs(
+        cameraPixelLight((x - 3) / cameraSample.width, clampedV)
+          - cameraPixelLight((x + 3) / cameraSample.width, clampedV)
+      );
+      const vertical = Math.abs(
+        cameraPixelLight(wrappedU, (y - 3) / cameraSample.height)
+          - cameraPixelLight(wrappedU, (y + 3) / cameraSample.height)
+      );
+      const edge = Math.max(horizontal, vertical);
 
       // Инверсия: тёмное становится светлым, светлое становится тёмным.
       if (CONFIG.invertCamera) {
         light = 1 - light;
       }
 
-      const value = (light - CONFIG.brightnessThreshold) * CONFIG.brightnessContrast;
+      const value = Math.max(
+        edge * CONFIG.edgeContrast,
+        (light - CONFIG.brightnessThreshold) * CONFIG.brightnessContrast
+      );
 
       return M.clamp(value, 0, 1);
     }
