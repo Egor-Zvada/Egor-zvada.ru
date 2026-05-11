@@ -16,15 +16,15 @@
   <meta property="og:title" content="<?= htmlspecialchars($pageTitle ?? 'Егор Звада — портфолио', ENT_QUOTES, 'UTF-8') ?>">
   <meta property="og:description" content="<?= htmlspecialchars($pageDescription ?? '', ENT_QUOTES, 'UTF-8') ?>">
   <meta property="og:url" content="<?= htmlspecialchars($pageUrl ?? 'https://egor-zvada.ru/', ENT_QUOTES, 'UTF-8') ?>">
-  <meta property="og:image" content="<?= htmlspecialchars($pageImage ?? 'https://egor-zvada.ru/assets/img/og-image.svg', ENT_QUOTES, 'UTF-8') ?>">
+  <meta property="og:image" content="<?= htmlspecialchars($pageImage ?? 'https://egor-zvada.ru/assets/img/brand/og-image.svg', ENT_QUOTES, 'UTF-8') ?>">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="<?= htmlspecialchars($pageTitle ?? 'Егор Звада — портфолио', ENT_QUOTES, 'UTF-8') ?>">
   <meta name="twitter:description" content="<?= htmlspecialchars($pageDescription ?? '', ENT_QUOTES, 'UTF-8') ?>">
-  <meta name="twitter:image" content="<?= htmlspecialchars($pageImage ?? 'https://egor-zvada.ru/assets/img/og-image.svg', ENT_QUOTES, 'UTF-8') ?>">
+  <meta name="twitter:image" content="<?= htmlspecialchars($pageImage ?? 'https://egor-zvada.ru/assets/img/brand/og-image.svg', ENT_QUOTES, 'UTF-8') ?>">
 
   <title><?= htmlspecialchars($pageTitle ?? 'egor_zvada', ENT_QUOTES, 'UTF-8') ?></title>
 
-  <link rel="icon" href="/assets/svg/logo.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/brand/logo.svg" type="image/svg+xml">
   <link rel="manifest" href="/site.webmanifest">
   <link rel="preload" href="/assets/css/theme.css" as="style">
   <link rel="stylesheet" href="/assets/css/base.css">

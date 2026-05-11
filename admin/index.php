@@ -26,8 +26,14 @@ $settingsFile = $root . '/data/settings.php';
 $contactsFile = $root . '/data/contacts.php';
 $aboutFile = $root . '/data/about.php';
 $tagsFile = $root . '/data/tags.php';
-$uploadWebDir = '/assets/img/uploads';
-$uploadFsDir = $root . $uploadWebDir;
+$skillUploadWebDir = '/assets/img/uploads/skills';
+$skillUploadFsDir = $root . $skillUploadWebDir;
+$projectUploadWebDir = '/assets/img/uploads/projects';
+$projectUploadFsDir = $root . $projectUploadWebDir;
+$aboutUploadWebDir = '/assets/img/uploads/about';
+$aboutUploadFsDir = $root . $aboutUploadWebDir;
+$projectVideoUploadWebDir = '/assets/video/uploads/projects';
+$projectVideoUploadFsDir = $root . $projectVideoUploadWebDir;
 
 function h($value): string {
   return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
@@ -118,11 +124,22 @@ function save_assoc(string $file, array $items): void {
 }
 
 function is_uploaded_asset(string $path): bool {
-  return strpos($path, '/assets/img/uploads/') === 0;
+  return strpos($path, '/assets/img/uploads/') === 0
+    || strpos($path, '/assets/video/uploads/') === 0;
 }
 
 function is_project_placeholder_asset(string $path): bool {
-  return strpos($path, '/assets/img/projects/') === 0;
+  return in_array($path, [
+    ez_default_project_image_path(),
+    '/assets/img/projects/broadcast.svg',
+    '/assets/img/projects/esports.svg',
+    '/assets/img/projects/kvn.svg',
+    '/assets/img/projects/light.svg',
+    '/assets/img/projects/network.svg',
+    '/assets/img/projects/resolume.svg',
+    '/assets/img/projects/systems.svg',
+    '/assets/img/projects/touchdesigner.svg',
+  ], true);
 }
 
 function is_video_asset(string $path): bool {
@@ -137,9 +154,16 @@ function delete_uploaded_asset(string $path, string $root): void {
 
   $relativePath = ltrim($path, '/');
   $fullPath = realpath($root . '/' . $relativePath);
-  $uploadsPath = realpath($root . '/assets/img/uploads');
-  if ($fullPath && $uploadsPath && strpos($fullPath, $uploadsPath) === 0 && is_file($fullPath)) {
-    unlink($fullPath);
+  $allowedRoots = [
+    realpath($root . '/assets/img/uploads'),
+    realpath($root . '/assets/video/uploads'),
+  ];
+
+  foreach ($allowedRoots as $uploadsPath) {
+    if ($fullPath && $uploadsPath && strpos($fullPath, $uploadsPath) === 0 && is_file($fullPath)) {
+      unlink($fullPath);
+      return;
+    }
   }
 }
 
@@ -154,35 +178,10 @@ function remove_deleted_assets(array $paths, array $deletedPaths, string $root):
 
 function default_skill_icon(string $title, string $fallback = ''): string {
   if ($fallback !== '') {
-    return $fallback;
+    return ez_normalize_asset_path($fallback) ?: ez_default_skill_icon_path();
   }
 
-  $normalized = function_exists('mb_strtolower') ? mb_strtolower($title, 'UTF-8') : strtolower($title);
-  $map = [
-    'grandma' => '/assets/svg/icons/grandma3.svg',
-    'touchdesigner' => '/assets/svg/icons/touchdesigner.svg',
-    'resolume' => '/assets/svg/icons/resolume.svg',
-    'final cut' => '/assets/svg/icons/finalcut.svg',
-    'linux' => '/assets/svg/icons/systems.svg',
-    'windows' => '/assets/svg/icons/systems.svg',
-    'nginx' => '/assets/svg/icons/infrastructure.svg',
-    'apache' => '/assets/svg/icons/infrastructure.svg',
-    'трансля' => '/assets/svg/icons/broadcast.svg',
-    'ndi' => '/assets/svg/icons/broadcast.svg',
-    'ии' => '/assets/svg/icons/ai.svg',
-    'ai' => '/assets/svg/icons/ai.svg',
-    'генерац' => '/assets/svg/icons/generation.svg',
-    'чат' => '/assets/svg/icons/chatbot.svg',
-    'сети' => '/assets/svg/icons/network.svg',
-  ];
-
-  foreach ($map as $needle => $icon) {
-    if (strpos($normalized, $needle) !== false) {
-      return $icon;
-    }
-  }
-
-  return '';
+  return ez_default_skill_icon_path();
 }
 
 function list_from_text(string $value): array {
@@ -277,7 +276,15 @@ function validate_svg_upload(string $tmpName): void {
   }
 }
 
-function save_upload(string $field, string $uploadFsDir, string $uploadWebDir, string $fallback = '', bool $allowVideo = false): string {
+function save_upload(
+  string $field,
+  string $uploadFsDir,
+  string $uploadWebDir,
+  string $fallback = '',
+  bool $allowVideo = false,
+  ?string $videoUploadFsDir = null,
+  ?string $videoUploadWebDir = null
+): string {
   if (empty($_FILES[$field]) || ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
     return $fallback;
   }
@@ -290,10 +297,6 @@ function save_upload(string $field, string $uploadFsDir, string $uploadWebDir, s
   $maxSize = $allowVideo ? 80 * 1024 * 1024 : 8 * 1024 * 1024;
   if (($file['size'] ?? 0) > $maxSize) {
     throw new RuntimeException('Файл слишком большой. Максимум ' . ($allowVideo ? '80' : '8') . ' МБ.');
-  }
-
-  if (!is_dir($uploadFsDir) && !mkdir($uploadFsDir, 0775, true)) {
-    throw new RuntimeException('Не получилось создать папку загрузок.');
   }
 
   $tmpName = (string) $file['tmp_name'];
@@ -331,18 +334,36 @@ function save_upload(string $field, string $uploadFsDir, string $uploadWebDir, s
     }
   }
 
+  $targetFsDir = $uploadFsDir;
+  $targetWebDir = $uploadWebDir;
+  if (in_array($extension, $videoExtensions, true) && $allowVideo) {
+    $targetFsDir = $videoUploadFsDir ?: $uploadFsDir;
+    $targetWebDir = $videoUploadWebDir ?: $uploadWebDir;
+  }
+
+  if (!is_dir($targetFsDir) && !mkdir($targetFsDir, 0775, true)) {
+    throw new RuntimeException('Не получилось создать папку загрузок.');
+  }
+
   $name = slugify(pathinfo($originalName, PATHINFO_FILENAME));
   $targetName = $name . '-' . date('Ymd-His') . '-' . bin2hex(random_bytes(3)) . '.' . $extension;
-  $targetPath = $uploadFsDir . '/' . $targetName;
+  $targetPath = $targetFsDir . '/' . $targetName;
 
   if (!move_uploaded_file($tmpName, $targetPath)) {
     throw new RuntimeException('Не получилось сохранить загруженный файл.');
   }
 
-  return $uploadWebDir . '/' . $targetName;
+  return $targetWebDir . '/' . $targetName;
 }
 
-function save_multiple_uploads(string $field, string $uploadFsDir, string $uploadWebDir, bool $allowVideo = false): array {
+function save_multiple_uploads(
+  string $field,
+  string $uploadFsDir,
+  string $uploadWebDir,
+  bool $allowVideo = false,
+  ?string $videoUploadFsDir = null,
+  ?string $videoUploadWebDir = null
+): array {
   if (empty($_FILES[$field]) || !is_array($_FILES[$field]['name'])) {
     return [];
   }
@@ -361,7 +382,15 @@ function save_multiple_uploads(string $field, string $uploadFsDir, string $uploa
       'error' => $files['error'][$index] ?? UPLOAD_ERR_NO_FILE,
       'size' => $files['size'][$index] ?? 0,
     ];
-    $saved[] = save_upload('_single_gallery_upload', $uploadFsDir, $uploadWebDir, '', $allowVideo);
+    $saved[] = save_upload(
+      '_single_gallery_upload',
+      $uploadFsDir,
+      $uploadWebDir,
+      '',
+      $allowVideo,
+      $videoUploadFsDir,
+      $videoUploadWebDir
+    );
     unset($_FILES['_single_gallery_upload']);
   }
 
@@ -415,7 +444,7 @@ try {
         $icon = $defaultIcon ?: default_skill_icon($title);
       }
 
-      $icon = save_upload('icon_upload', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], $icon);
+      $icon = save_upload('icon_upload', $GLOBALS['skillUploadFsDir'], $GLOBALS['skillUploadWebDir'], $icon);
 
       $item = [
         'title' => $title,
@@ -466,7 +495,14 @@ try {
       $title = trim((string) ($_POST['title'] ?? ''));
       $manualGallery = list_from_text((string) ($_POST['gallery'] ?? ''));
       $manualGallery = remove_deleted_assets($manualGallery, $_POST['delete_gallery'] ?? [], $GLOBALS['root']);
-      $uploadedGallery = save_multiple_uploads('gallery_uploads', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], true);
+      $uploadedGallery = save_multiple_uploads(
+        'gallery_uploads',
+        $GLOBALS['projectUploadFsDir'],
+        $GLOBALS['projectUploadWebDir'],
+        true,
+        $GLOBALS['projectVideoUploadFsDir'],
+        $GLOBALS['projectVideoUploadWebDir']
+      );
       $oldImage = (string) ($old['image'] ?? '');
       $oldVideo = (string) ($old['video'] ?? '');
       $defaultImage = (string) ($old['default_image'] ?? (is_uploaded_asset($oldImage) ? '' : $oldImage));
@@ -483,7 +519,7 @@ try {
         $image = $defaultImage;
       }
 
-      $image = save_upload('image_upload', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], $image);
+      $image = save_upload('image_upload', $GLOBALS['projectUploadFsDir'], $GLOBALS['projectUploadWebDir'], $image);
       if (!empty($_POST['delete_video'])) {
         delete_uploaded_asset($oldVideo, $GLOBALS['root']);
         $video = '';
@@ -492,7 +528,15 @@ try {
       if ($oldVideo !== '' && in_array($oldVideo, $_POST['delete_gallery'] ?? [], true)) {
         $video = '';
       }
-      $video = save_upload('video_upload', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir'], $video, true);
+      $video = save_upload(
+        'video_upload',
+        $GLOBALS['projectUploadFsDir'],
+        $GLOBALS['projectUploadWebDir'],
+        $video,
+        true,
+        $GLOBALS['projectVideoUploadFsDir'],
+        $GLOBALS['projectVideoUploadWebDir']
+      );
 
       $tagsData = load_assoc($GLOBALS['tagsFile']);
       $projectCategories = $tagsData['project_categories'] ?? [];
@@ -600,7 +644,7 @@ try {
       $oldAbout = load_assoc($GLOBALS['aboutFile']);
       $manualGallery = list_from_text((string) ($_POST['about_gallery'] ?? implode("\n", $oldAbout['gallery'] ?? [])));
       $manualGallery = remove_deleted_assets($manualGallery, $_POST['delete_about_gallery'] ?? [], $GLOBALS['root']);
-      $uploadedGallery = save_multiple_uploads('about_gallery_uploads', $GLOBALS['uploadFsDir'], $GLOBALS['uploadWebDir']);
+      $uploadedGallery = save_multiple_uploads('about_gallery_uploads', $GLOBALS['aboutUploadFsDir'], $GLOBALS['aboutUploadWebDir']);
 
       $about = [
         'lead' => trim((string) ($_POST['about_lead'] ?? '')),
@@ -782,7 +826,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
       <header class="top">
         <div>
           <div class="brand">egor_zvada / admin</div>
-          <div class="hint">Загрузка картинок сохраняет файлы в <?= h($uploadWebDir) ?></div>
+          <div class="hint">Загрузки раскладываются по папкам: about, projects, skills и video/uploads/projects</div>
         </div>
         <div class="nav">
           <a class="<?= $tab === 'skills' ? 'is-active' : '' ?>" href="/admin/?tab=skills">Навыки</a>
@@ -933,7 +977,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               </div>
             <?php endif; ?>
             <label>Загрузить фото <input name="about_gallery_uploads[]" type="file" accept="image/*,.svg" multiple></label>
-            <p class="hint">Если фото не загружены, сайт покажет старый fallback /assets/img/about/about.jpg, если файл есть.</p>
+            <p class="hint">Загрузки сохраняются в /assets/img/uploads/about.</p>
             <button class="primary" type="submit">Сохранить "Обо мне"</button>
           </form>
         </section>
@@ -994,7 +1038,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               <label>Название категории <input name="category_label" value="<?= h($editProject['category_label'] ?? '') ?>" placeholder="event tech"></label>
               <label>Краткое описание <textarea name="description" required><?= h($editProject['description'] ?? '') ?></textarea></label>
               <label>Полное описание <textarea name="full_description"><?= h($editProject['full_description'] ?? '') ?></textarea></label>
-              <label>Главная картинка, путь <input name="image" value="<?= h($editProject['image'] ?? '') ?>" placeholder="/assets/img/projects/example.svg"></label>
+              <label>Главная картинка, путь <input name="image" value="<?= h($editProject['image'] ?? '') ?>" placeholder="/assets/img/projects/ai.svg"></label>
               <?php if (!empty($editProject['image']) && is_uploaded_asset((string) $editProject['image'])): ?>
                 <label class="check"><input name="delete_image" type="checkbox" value="1"> Удалить главную картинку с сервера и вернуть дефолт</label>
               <?php endif; ?>
@@ -1081,7 +1125,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               <label>Название <input name="title" value="<?= h($editSkill['title'] ?? '') ?>" required></label>
               <label>Номер в списке <input name="order" type="number" min="1" value="<?= h($editSkill['order'] ?? ($editSkillIndex !== '' ? ((int) $editSkillIndex + 1) : count($skills) + 1)) ?>" required></label>
               <label>Описание <textarea name="description" required><?= h($editSkill['description'] ?? '') ?></textarea></label>
-              <label>Иконка, путь <input name="icon" value="<?= h($editSkill['icon'] ?? '') ?>" placeholder="/assets/svg/icons/example.svg"></label>
+              <label>Иконка, путь <input name="icon" value="<?= h($editSkill['icon'] ?? '') ?>" placeholder="/assets/svg/icons/ai.svg"></label>
               <?php if (!empty($editSkill['icon']) && is_uploaded_asset((string) $editSkill['icon'])): ?>
                 <label class="check"><input name="delete_icon" type="checkbox" value="1"> Удалить загруженную иконку с сервера и вернуть дефолт</label>
               <?php endif; ?>

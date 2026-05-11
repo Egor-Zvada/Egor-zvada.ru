@@ -6,7 +6,7 @@ $pageTitle = 'Егор Звада — портфолио';
 $pageDescription = 'Системный администратор и технический специалист мероприятий. Сцена, медиа, ИИ и цифровая инфраструктура.';
 $pageVersion = $siteSettings['version'] ?? '0.2-beta';
 $pageUrl = 'https://egor-zvada.ru/';
-$pageImage = 'https://egor-zvada.ru/assets/img/og-image.svg';
+$pageImage = 'https://egor-zvada.ru/assets/img/brand/og-image.svg';
 ?>
 <?php include __DIR__ . '/partials/head.php'; ?>
 <?php include __DIR__ . '/partials/header.php'; ?>

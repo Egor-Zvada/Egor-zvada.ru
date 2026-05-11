@@ -27,6 +27,84 @@ function ez_json_decode(?string $value): array {
   return is_array($decoded) ? array_values($decoded) : [];
 }
 
+function ez_default_skill_icon_path(): string {
+  return '/assets/svg/icons/ai.svg';
+}
+
+function ez_default_project_image_path(): string {
+  return '/assets/img/projects/ai.svg';
+}
+
+function ez_normalize_asset_path(?string $path): string {
+  $path = trim((string) $path);
+  if ($path === '') {
+    return '';
+  }
+
+  $oldProjectDefaults = [
+    '/assets/img/projects/broadcast.svg',
+    '/assets/img/projects/esports.svg',
+    '/assets/img/projects/kvn.svg',
+    '/assets/img/projects/light.svg',
+    '/assets/img/projects/network.svg',
+    '/assets/img/projects/resolume.svg',
+    '/assets/img/projects/systems.svg',
+    '/assets/img/projects/touchdesigner.svg',
+  ];
+
+  if (in_array($path, $oldProjectDefaults, true)) {
+    return ez_default_project_image_path();
+  }
+
+  if (preg_match('#^/assets/svg/icons/[a-z0-9_-]+\.svg$#i', $path)) {
+    return ez_default_skill_icon_path();
+  }
+
+  return match ($path) {
+    '/assets/svg/logo.svg' => '/assets/img/brand/logo.svg',
+    '/assets/img/og-image.svg' => '/assets/img/brand/og-image.svg',
+    default => $path,
+  };
+}
+
+function ez_is_local_asset_path(string $path): bool {
+  return strpos($path, '/assets/') === 0;
+}
+
+function ez_is_uploaded_asset_path(string $path): bool {
+  return strpos($path, '/assets/img/uploads/') === 0
+    || strpos($path, '/assets/video/uploads/') === 0;
+}
+
+function ez_public_asset_exists(string $path): bool {
+  return !ez_is_local_asset_path($path) || is_file(ez_root() . $path);
+}
+
+function ez_asset_or_default(string $path, string $default): string {
+  $path = ez_normalize_asset_path($path);
+  if ($path === '') {
+    return $default;
+  }
+
+  if (ez_is_uploaded_asset_path($path) && !ez_public_asset_exists($path)) {
+    return $default;
+  }
+
+  return $path;
+}
+
+function ez_normalize_asset_list(array $paths): array {
+  $normalized = [];
+  foreach ($paths as $path) {
+    $path = ez_normalize_asset_path(is_string($path) ? $path : '');
+    if ($path !== '' && ez_public_asset_exists($path)) {
+      $normalized[] = $path;
+    }
+  }
+
+  return array_values(array_unique($normalized));
+}
+
 function ez_db_available(): bool {
   return class_exists(PDO::class)
     && in_array('sqlite', PDO::getAvailableDrivers(), true);
@@ -312,8 +390,8 @@ function ez_get_skills(): array {
     return [
       'title' => $row['title'] ?? '',
       'description' => $row['description'] ?? '',
-      'icon' => $row['icon'] ?? '',
-      'default_icon' => $row['default_icon'] ?? '',
+      'icon' => ez_asset_or_default((string) ($row['icon'] ?? ''), ez_default_skill_icon_path()),
+      'default_icon' => ez_normalize_asset_path($row['default_icon'] ?? '') ?: ez_default_skill_icon_path(),
       'invert_icon' => (bool) ($row['invert_icon'] ?? 0),
       'order' => (int) ($row['sort_order'] ?? 999),
       'level' => $row['level'] ?? '',
@@ -338,8 +416,8 @@ function ez_save_skills(array $skills, ?PDO $pdo = null): void {
     $statement->execute([
       ':title' => (string) ($skill['title'] ?? ''),
       ':description' => (string) ($skill['description'] ?? ''),
-      ':icon' => (string) ($skill['icon'] ?? ''),
-      ':default_icon' => (string) ($skill['default_icon'] ?? ''),
+      ':icon' => ez_normalize_asset_path($skill['icon'] ?? '') ?: ez_default_skill_icon_path(),
+      ':default_icon' => ez_normalize_asset_path($skill['default_icon'] ?? '') ?: ez_default_skill_icon_path(),
       ':invert_icon' => !empty($skill['invert_icon']) ? 1 : 0,
       ':sort_order' => max(1, (int) ($skill['order'] ?? ($index + 1))),
       ':level' => (string) ($skill['level'] ?? ''),
@@ -365,10 +443,10 @@ function ez_get_projects(): array {
       'category_label' => $row['category_label'] ?? '',
       'description' => $row['description'] ?? '',
       'full_description' => $row['full_description'] ?? '',
-      'image' => $row['image'] ?? '',
-      'default_image' => $row['default_image'] ?? '',
-      'gallery' => ez_json_decode($row['gallery_json'] ?? '[]'),
-      'video' => $row['video'] ?: null,
+      'image' => ez_asset_or_default((string) ($row['image'] ?? ''), ez_default_project_image_path()),
+      'default_image' => ez_normalize_asset_path($row['default_image'] ?? '') ?: ez_default_project_image_path(),
+      'gallery' => ez_normalize_asset_list(ez_json_decode($row['gallery_json'] ?? '[]')),
+      'video' => ez_asset_or_default((string) ($row['video'] ?: ''), '') ?: null,
       'tags' => ez_json_decode($row['tags_json'] ?? '[]'),
       'tools' => ez_json_decode($row['tools_json'] ?? '[]'),
       'is_hidden' => (bool) ($row['is_hidden'] ?? 0),
@@ -395,10 +473,10 @@ function ez_save_projects(array $projects, ?PDO $pdo = null): void {
       ':category_label' => (string) ($project['category_label'] ?? ''),
       ':description' => (string) ($project['description'] ?? ''),
       ':full_description' => (string) ($project['full_description'] ?? ''),
-      ':image' => (string) ($project['image'] ?? ''),
-      ':default_image' => (string) ($project['default_image'] ?? ''),
-      ':gallery_json' => ez_json_encode($project['gallery'] ?? []),
-      ':video' => ($project['video'] ?? null) ?: null,
+      ':image' => ez_normalize_asset_path($project['image'] ?? '') ?: ez_default_project_image_path(),
+      ':default_image' => ez_normalize_asset_path($project['default_image'] ?? '') ?: ez_default_project_image_path(),
+      ':gallery_json' => ez_json_encode(ez_normalize_asset_list($project['gallery'] ?? [])),
+      ':video' => ez_normalize_asset_path($project['video'] ?? '') ?: null,
       ':tags_json' => ez_json_encode($project['tags'] ?? []),
       ':tools_json' => ez_json_encode($project['tools'] ?? []),
       ':is_hidden' => !empty($project['is_hidden']) ? 1 : 0,

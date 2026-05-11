@@ -2,7 +2,7 @@
   <div class="container site-footer__inner">
     <div class="site-footer__brand-block">
       <a class="brand brand--footer" href="#top" aria-label="egor_zvada — наверх">
-        <img class="brand__mark" src="/assets/svg/logo.svg" alt="" width="32" height="32">
+        <img class="brand__mark" src="/assets/img/brand/logo.svg" alt="" width="32" height="32">
         <span class="brand__text">egor_zvada</span>
       </a>
       <p class="site-footer__phrase">Техника. Сцена. Системы.</p>

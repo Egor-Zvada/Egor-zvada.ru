@@ -6,7 +6,7 @@ return array (
     'title' => 'GrandMA 2/3',
     'description' => 'Программирование и работа со сценическим светом: шоу, сцены, эффекты и управление световой логикой.',
     'icon' => '/assets/img/uploads/ma-20260510-073741-ee7181.png',
-    'default_icon' => '/assets/svg/icons/grandma3.svg',
+    'default_icon' => '/assets/svg/icons/ai.svg',
     'invert_icon' => true,
     'order' => 1,
     'level' => 'light control',
@@ -40,7 +40,7 @@ return array (
     'title' => 'Resolume Arena',
     'description' => 'Видеоконтент, VJ-подача, мэппинг, работа с экранами и медиасерверная логика для мероприятий.',
     'icon' => '/assets/img/uploads/arena-logo-20260510-073923-8866ba.svg',
-    'default_icon' => '/assets/svg/icons/resolume.svg',
+    'default_icon' => '/assets/svg/icons/ai.svg',
     'order' => 3,
     'level' => 'media server',
     'category' => 'Видео',
@@ -57,7 +57,7 @@ return array (
     'title' => 'Final Cut Pro',
     'description' => 'Монтаж, подготовка роликов, бэкстейджей, промо и видеоматериалов для экранов и соцсетей.',
     'icon' => '/assets/img/uploads/final-cut-pro-20260510-074103-92b07c.png',
-    'default_icon' => '/assets/svg/icons/finalcut.svg',
+    'default_icon' => '/assets/svg/icons/ai.svg',
     'order' => 4,
     'level' => 'video editing',
     'category' => 'Монтаж',
@@ -73,7 +73,7 @@ return array (
     'title' => 'Linux / Windows',
     'description' => 'Администрирование серверов, рабочих станций, сетей, служб, резервирования и базовой инфраструктуры.',
     'icon' => '/assets/img/uploads/terminal-icon-500x500-20260510-075848-9e07a6.svg',
-    'default_icon' => '/assets/svg/icons/systems.svg',
+    'default_icon' => '/assets/svg/icons/ai.svg',
     'invert_icon' => true,
     'order' => 5,
     'level' => 'system admin',
@@ -90,7 +90,7 @@ return array (
   array (
     'title' => 'Nginx / Apache / PHP',
     'description' => 'Веб-серверы, reverse proxy, домены, HTTPS, PHP-проекты и базовая серверная архитектура для сайтов.',
-    'icon' => '/assets/svg/icons/infrastructure.svg',
+    'icon' => '/assets/svg/icons/ai.svg',
     'level' => 'web infra',
     'category' => 'Инфраструктура',
     'stack' => 
@@ -106,7 +106,7 @@ return array (
   array (
     'title' => 'Трансляции / NDI',
     'description' => 'Работа с видеоисточниками, сигналами, потоками, экранами и технической частью live-подачи.',
-    'icon' => '/assets/svg/icons/broadcast.svg',
+    'icon' => '/assets/svg/icons/ai.svg',
     'level' => 'broadcast',
     'category' => 'Live',
     'stack' => 
@@ -137,7 +137,7 @@ return array (
   array (
     'title' => 'Генерация фото / видео',
     'description' => 'Создание референсов, визуальных материалов, фото, роликов, идей и контента для мероприятий и проектов.',
-    'icon' => '/assets/svg/icons/generation.svg',
+    'icon' => '/assets/svg/icons/ai.svg',
     'level' => 'ai content',
     'category' => 'Контент',
     'stack' => 
@@ -153,7 +153,7 @@ return array (
   array (
     'title' => 'Чат-боты / AI API',
     'description' => 'Интеграция ИИ в рабочие процессы: боты, подсказки, автоматизация рутинных действий и генерация материалов.',
-    'icon' => '/assets/svg/icons/chatbot.svg',
+    'icon' => '/assets/svg/icons/ai.svg',
     'level' => 'ai workflow',
     'category' => 'Автоматизация',
     'stack' => 
@@ -169,7 +169,7 @@ return array (
   array (
     'title' => 'Сети / шоу-протоколы',
     'description' => 'Понимание сетевой связки площадки: устройства, адресация, сигналы, протоколы и стабильность передачи.',
-    'icon' => '/assets/svg/icons/network.svg',
+    'icon' => '/assets/svg/icons/ai.svg',
     'level' => 'signal flow',
     'category' => 'Сети',
     'stack' => 

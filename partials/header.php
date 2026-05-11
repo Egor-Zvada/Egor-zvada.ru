@@ -1,6 +1,6 @@
 <header class="site-header is-at-top" data-site-header>
   <a class="brand" href="#hero" aria-label="egor_zvada — наверх">
-    <img class="brand__mark" src="/assets/svg/logo.svg" alt="" width="38" height="38">
+    <img class="brand__mark" src="/assets/img/brand/logo.svg" alt="" width="38" height="38">
     <span class="brand__text">egor_zvada</span>
   </a>
 

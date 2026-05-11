@@ -15,7 +15,8 @@ The project is a modular PHP site with an internal admin panel. It is designed t
 - Editable skills, portfolio projects, tags, contacts, settings, and about text.
 - Admin panel at `/admin`.
 - Hidden admin entry from the footer version click counter.
-- Image uploads to `/assets/img/uploads`.
+- Typed image uploads to `/assets/img/uploads/...`.
+- Portfolio video uploads to `/assets/video/uploads/projects`.
 - Project galleries with delete controls for uploaded files.
 - Contact QR image generated from Telegram URL.
 - Fetch-based admin saves: forms update without a full page reload.
@@ -30,6 +31,7 @@ The project is a modular PHP site with an internal admin panel. It is designed t
   - `storage/`
   - `admin/config.php`
   - `assets/img/uploads/`
+  - `assets/video/uploads/`
   - `assets/img/qr/`
 
 No Node, npm, Composer, MariaDB, or PostgreSQL is required for the current version.
@@ -58,7 +60,7 @@ git pull origin main
 If uploads or data saving fail, check permissions:
 
 ```bash
-sudo chown -R www-data:www-data storage assets/img/uploads assets/img/qr admin/config.php
+sudo chown -R www-data:www-data storage assets/img/uploads assets/video/uploads assets/img/qr admin/config.php
 ```
 
 Use the web server user that matches your server setup. On some systems it may be `nginx`, `apache`, or another user instead of `www-data`.
@@ -111,6 +113,12 @@ To create or refresh the SQLite file manually on the server:
 php bin/migrate-sqlite.php
 ```
 
+To move old uploaded files from the flat upload folder into typed folders and update SQLite paths:
+
+```bash
+php bin/normalize-assets.php
+```
+
 If you want the database outside the web root, set `SITE_DB_PATH` in PHP-FPM/Nginx/Apache, for example:
 
 ```text
@@ -130,25 +138,31 @@ Apache reads `storage/.htaccess`, which denies direct access there.
 
 ## Media
 
-Uploaded files are stored here:
+Uploaded files are stored by content type:
 
 ```text
-assets/img/uploads/
+assets/img/uploads/about/       About section photos
+assets/img/uploads/projects/    Portfolio images
+assets/img/uploads/skills/      Skill icons
+assets/video/uploads/projects/  Portfolio videos
 ```
 
-The Tavrida static image should be placed manually here:
+Committed fallback assets are intentionally minimal:
+
+```text
+assets/svg/icons/ai.svg         Default skill icon
+assets/img/projects/ai.svg      Default project image
+assets/img/brand/logo.svg       Logo and favicon
+assets/img/brand/og-image.svg   Social preview image
+```
+
+The Tavrida static image can be placed manually here if the section is used:
 
 ```text
 assets/img/tavrida/tavrida.jpg
 ```
 
-The About section image should be placed manually here:
-
-```text
-assets/img/about/about.jpg
-```
-
-If these files are missing, the site uses its fallback visuals.
+If Tavrida image is missing, the site shows the upload hint/fallback visual.
 
 ## Project Structure
 
@@ -161,8 +175,11 @@ data/                     Legacy seed/fallback PHP array data
 storage/                  SQLite database directory
 assets/css/               Theme, layout, components, sections, responsive styles
 assets/js/                Theme, navigation, admin behavior, project UI, motion
-assets/img/               Images, uploads, QR, project visuals
-assets/svg/               Logo and skill icons
+assets/img/brand/         Logo and social preview
+assets/img/projects/      Single project fallback image
+assets/img/uploads/       Uploaded images by content type
+assets/video/uploads/     Uploaded videos by content type
+assets/svg/icons/         Single skill fallback icon
 ```
 
 ## Notes
