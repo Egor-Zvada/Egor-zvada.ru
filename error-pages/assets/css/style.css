@@ -388,7 +388,7 @@ body {
 
   /* ДВИГАТЬ НИЖНИЙ ТЕКСТ НА ДЕСКТОПЕ
      больше bottom = выше */
-  bottom: 132px;
+  bottom: 76px;
 
   transform: translateX(-50%);
   width: min(92vw, 900px);
@@ -437,14 +437,13 @@ body {
   user-select: none;
   opacity: 0;
   animation: fadeInBottom 700ms ease-out 2450ms forwards;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 9px;
   text-align: center;
 }
 
 .footer-actions {
+  position: fixed;
+  top: 18px;
+  right: 104px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -473,6 +472,9 @@ body {
 }
 
 .footer-rights {
+  position: fixed;
+  left: 22px;
+  bottom: 24px;
   color: var(--text-faint);
   font-size: 10px;
   letter-spacing: .5px;
@@ -714,7 +716,7 @@ body {
 
   .bottom-text {
     /* ДВИГАТЬ НИЖНИЙ ТЕКСТ НА МОБИЛКЕ */
-    bottom: 176px;
+    bottom: 140px;
 
     width: min(92vw, 620px);
   }
@@ -724,10 +726,11 @@ body {
     bottom: 28px;
 
     font-size: 10px;
-    gap: 7px;
   }
 
   .footer-actions {
+    top: 78px;
+    right: 16px;
     gap: 7px;
   }
 
@@ -735,6 +738,14 @@ body {
   .footer-actions button {
     font-size: 9px;
     padding: 6px 8px;
+  }
+
+  .footer-rights {
+    left: 16px;
+    bottom: 20px;
+    max-width: 38vw;
+    white-space: normal;
+    text-align: left;
   }
 }
 
@@ -748,7 +759,7 @@ body {
   }
 
   .bottom-text {
-    bottom: 164px;
+    bottom: 126px;
   }
 
   .footer-time {
