@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 — Упс, ничего не найдено</title>
+  <link rel="stylesheet" href="/error-pages/assets/css/style.css">
+</head>
+
+<body data-error="404">
+  <div class="noise"></div>
+  <div class="scanline"></div>
+
+  <button class="theme-toggle" type="button" id="theme-toggle" aria-label="Переключить тему">
+    <span class="theme-toggle__text">dark</span>
+  </button>
+
+  <main class="page">
+    <div class="brand" aria-label="egor_zvada">
+      <div class="mark"><span>e</span></div>
+      <div class="brand-name">egor_zvada</div>
+    </div>
+
+    <div class="boot" aria-hidden="true">
+      <span class="boot-line">&gt; init service_route</span>
+      <span class="boot-line">&gt; status: 404 not found</span>
+    </div>
+
+    <section class="center" aria-label="Ошибка 404">
+      <div class="error-label">NOT FOUND</div>
+
+      <div class="error-wrap">
+        <h1 class="error">
+          <span class="digit digit-1">4</span><span class="digit digit-2">0</span><span class="digit digit-3">4</span>
+        </h1>
+        <span class="cursor" aria-hidden="true"></span>
+      </div>
+    </section>
+
+    <div class="bottom-text">
+      <h2 class="title">Упс, ничего не найдено</h2>
+      <p class="description">404 / Не найдено</p>
+      <p class="text">Такой страницы здесь нет. Возможно, адрес изменился или был введён с ошибкой.</p>
+    </div>
+
+    <footer class="footer-time">
+      <div id="time">TIME --:--:--</div>
+      <nav class="footer-actions" aria-label="Навигация страницы ошибки">
+        <a href="/">На главную</a>
+        <button type="button" data-go-back>Назад</button>
+      </nav>
+      <div class="footer-rights">Егор Звада™. Все права защищены.</div>
+    </footer>
+  </main>
+
+  <script src="/error-pages/assets/js/app.js"></script>
+</body>
+</html>

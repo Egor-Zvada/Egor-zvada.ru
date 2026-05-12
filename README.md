@@ -180,6 +180,8 @@ assets/img/projects/      Single project fallback image
 assets/img/uploads/       Uploaded images by content type
 assets/video/uploads/     Uploaded videos by content type
 assets/svg/icons/         Single skill fallback icon
+error-pages/              Reusable static service error pages
+teapot/                   Direct 418 "I'm a teapot" page
 ```
 
 ## Notes
@@ -188,3 +190,4 @@ assets/svg/icons/         Single skill fallback icon
 - Uploaded media should be backed up before destructive server operations.
 - The admin writes content to SQLite.
 - Three.js is loaded from CDN for the hero background. If it fails, the site falls back to canvas animation.
+- Error pages can be wired in Nginx with `include /var/www/egor-zvada.ru/error-pages/nginx.example.conf;`.

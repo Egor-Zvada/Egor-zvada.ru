@@ -1,0 +1,792 @@
+/* =========================================================
+   SERVICE ERROR PAGES
+   Единый стиль для страниц ошибок приложения/сервиса.
+   Комментарии специально оставлены по-русски, чтобы руками быстро двигать элементы.
+   ========================================================= */
+
+/* =========================================================
+   1. ЦВЕТА И ТЕМЫ
+   ========================================================= */
+
+:root {
+  color-scheme: dark light;
+
+  --bg-main: #000000;
+  --bg-top: #050505;
+  --text-main: #f4f4f4;
+  --text-muted: rgba(255, 255, 255, .62);
+  --text-soft: rgba(255, 255, 255, .42);
+  --text-faint: rgba(255, 255, 255, .24);
+  --line-main: #f4f4f4;
+  --cursor: #f4f4f4;
+  --noise-opacity: .04;
+  --scanline-opacity: .18;
+
+  --glow-left: rgba(255, 255, 255, .08);
+  --glow-center: rgba(255, 255, 255, .045);
+  --scanline-color: rgba(255, 255, 255, .025);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-main: #f4f4f0;
+    --bg-top: #ffffff;
+    --text-main: #111111;
+    --text-muted: rgba(0, 0, 0, .66);
+    --text-soft: rgba(0, 0, 0, .46);
+    --text-faint: rgba(0, 0, 0, .28);
+    --line-main: #111111;
+    --cursor: #111111;
+    --noise-opacity: .035;
+    --scanline-opacity: .10;
+
+    --glow-left: rgba(0, 0, 0, .055);
+    --glow-center: rgba(0, 0, 0, .035);
+    --scanline-color: rgba(0, 0, 0, .025);
+  }
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-main: #000000;
+  --bg-top: #050505;
+  --text-main: #f4f4f4;
+  --text-muted: rgba(255, 255, 255, .62);
+  --text-soft: rgba(255, 255, 255, .42);
+  --text-faint: rgba(255, 255, 255, .24);
+  --line-main: #f4f4f4;
+  --cursor: #f4f4f4;
+  --noise-opacity: .04;
+  --scanline-opacity: .18;
+
+  --glow-left: rgba(255, 255, 255, .08);
+  --glow-center: rgba(255, 255, 255, .045);
+  --scanline-color: rgba(255, 255, 255, .025);
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-main: #f4f4f0;
+  --bg-top: #ffffff;
+  --text-main: #111111;
+  --text-muted: rgba(0, 0, 0, .66);
+  --text-soft: rgba(0, 0, 0, .46);
+  --text-faint: rgba(0, 0, 0, .28);
+  --line-main: #111111;
+  --cursor: #111111;
+  --noise-opacity: .035;
+  --scanline-opacity: .10;
+
+  --glow-left: rgba(0, 0, 0, .055);
+  --glow-center: rgba(0, 0, 0, .035);
+  --scanline-color: rgba(0, 0, 0, .025);
+}
+
+/* =========================================================
+   2. БАЗА СТРАНИЦЫ
+   Скролл отключён, страница фиксируется в экран.
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 18% 38%, var(--glow-left), transparent 26%),
+    radial-gradient(circle at center, var(--glow-center), transparent 38%),
+    linear-gradient(180deg, var(--bg-top) 0%, var(--bg-main) 100%);
+  color: var(--text-main);
+  font-family: "JetBrains Mono", "IBM Plex Mono", "Roboto Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.page {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* =========================================================
+   3. ЛОГО СВЕРХУ
+   Двигать: .brand top.
+   ========================================================= */
+
+.brand {
+  position: absolute;
+
+  /* ДВИГАТЬ ЛОГО ВВЕРХ/ВНИЗ НА ДЕСКТОПЕ */
+  top: 22px;
+
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  user-select: none;
+  opacity: 0;
+  animation: fadeInBrand 500ms ease-out 700ms forwards;
+}
+
+.mark {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--line-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -1px;
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.mark span {
+  position: relative;
+
+  /* ДВИГАТЬ БУКВУ e ВНУТРИ КВАДРАТА */
+  top: -3px;
+  left: 0;
+}
+
+.mark::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 1.5px;
+  background: var(--line-main);
+
+  /* ДВИГАТЬ ПОЛОСКУ ПОД e */
+  bottom: 3px;
+
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.brand-name {
+  font-size: clamp(14px, 1.4vw, 18px);
+  font-weight: 400;
+  letter-spacing: .4px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   4. КНОПКА ТЕМЫ
+   Кнопка переключает dark/light.
+   ========================================================= */
+
+.theme-toggle {
+  position: fixed;
+
+  /* ДВИГАТЬ КНОПКУ ТЕМЫ НА ДЕСКТОПЕ */
+  top: 18px;
+  right: 22px;
+
+  z-index: 20;
+  border: 1px solid var(--text-faint);
+  background: transparent;
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  padding: 8px 11px;
+  cursor: pointer;
+  opacity: .72;
+  transition: opacity 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.theme-toggle:hover {
+  opacity: 1;
+  color: var(--text-main);
+  border-color: var(--line-main);
+}
+
+/* =========================================================
+   5. BOOT-LINE / ТЕРМИНАЛЬНЫЕ СТРОКИ
+   Двигать: .boot top / left.
+   ========================================================= */
+
+.boot {
+  position: absolute;
+
+  /* ДВИГАТЬ BOOT-LINE НА ДЕСКТОПЕ */
+  top: 88px;
+  left: 34px;
+
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.8;
+  letter-spacing: .2px;
+  user-select: none;
+}
+
+.boot-line {
+  display: block;
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 1px solid var(--text-muted);
+}
+
+.boot-line:nth-child(1) {
+  animation:
+    typeLine1 520ms steps(32, end) 120ms forwards,
+    caretOff 1ms linear 650ms forwards;
+}
+
+.boot-line:nth-child(2) {
+  animation:
+    typeLine2 560ms steps(32, end) 720ms forwards,
+    caretOff 1ms linear 1290ms forwards;
+}
+
+/* =========================================================
+   6. ЦЕНТРАЛЬНЫЙ БЛОК КОДА ОШИБКИ + LABEL
+   .center — общая зона.
+   .error-label — рамка с текстом ошибки.
+   .error-wrap — код и курсор.
+   ========================================================= */
+
+.center {
+  position: relative;
+  width: min(92vw, 1180px);
+
+  /* ВЫСОТА ЗОНЫ КОДА НА ДЕСКТОПЕ */
+  height: clamp(280px, 34vw, 520px);
+}
+
+.error-label {
+  position: absolute;
+
+  /* ДВИГАТЬ РАМКУ ERROR/LABEL НА ДЕСКТОПЕ */
+  top: 12px;
+  left: 3%;
+
+  border: 3px solid var(--line-main);
+  padding: 8px 42px;
+  font-size: clamp(20px, 2.5vw, 38px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fadeIn 450ms ease-out 1450ms forwards;
+  z-index: 2;
+}
+
+.error-wrap {
+  position: absolute;
+  left: 50%;
+
+  /* ДВИГАТЬ КОД ОШИБКИ ВВЕРХ/ВНИЗ НА ДЕСКТОПЕ
+     больше bottom = выше */
+  bottom: 42px;
+
+  transform: translateX(-50%);
+  width: min-content;
+  display: block;
+  white-space: nowrap;
+}
+
+.error {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  margin: 0;
+
+  /* РАЗМЕР КОДА ОШИБКИ НА ДЕСКТОПЕ */
+  font-size: clamp(170px, 33vw, 520px);
+
+  font-weight: 700;
+  line-height: .78;
+
+  /* РАССТОЯНИЕ МЕЖДУ ЦИФРАМИ */
+  letter-spacing: -0.075em;
+
+  text-align: center;
+  white-space: nowrap;
+}
+
+.digit {
+  display: inline-block;
+  opacity: 0;
+}
+
+.digit-1 {
+  animation: showDigit 1ms linear 1550ms forwards;
+}
+
+.digit-2 {
+  animation: showDigit 1ms linear 1720ms forwards;
+}
+
+.digit-3 {
+  animation: showDigit 1ms linear 1890ms forwards;
+}
+
+/* Терминальный мигающий курсор рядом с кодом */
+.cursor {
+  position: absolute;
+
+  /* ДВИГАТЬ КУРСОР ВЛЕВО/ВПРАВО НА ДЕСКТОПЕ
+     больше значение = правее */
+  left: calc(100% + clamp(24px, 3vw, 54px));
+
+  /* ДВИГАТЬ КУРСОР ВВЕРХ/ВНИЗ НА ДЕСКТОПЕ
+     больше bottom = выше */
+  bottom: clamp(8px, .7vw, 14px);
+
+  display: block;
+
+  /* РАЗМЕР КУРСОРА НА ДЕСКТОПЕ */
+  width: clamp(70px, 7vw, 120px);
+  height: clamp(14px, 1.1vw, 24px);
+
+  background: var(--cursor);
+  opacity: 0;
+  animation:
+    showCursor 1ms linear 1900ms forwards,
+    blink 900ms steps(1, end) 2000ms infinite;
+}
+
+/* =========================================================
+   7. НИЖНИЙ ТЕКСТ
+   Двигать: .bottom-text bottom.
+   ========================================================= */
+
+.bottom-text {
+  position: absolute;
+  left: 50%;
+
+  /* ДВИГАТЬ НИЖНИЙ ТЕКСТ НА ДЕСКТОПЕ
+     больше bottom = выше */
+  bottom: 132px;
+
+  transform: translateX(-50%);
+  width: min(92vw, 900px);
+  text-align: center;
+  opacity: 0;
+  animation: fadeInBottom 700ms ease-out 2200ms forwards;
+}
+
+.title {
+  margin: 0 0 10px;
+  font-size: clamp(22px, 2.7vw, 34px);
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+
+.description {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: clamp(14px, 1.5vw, 19px);
+  font-weight: 500;
+  letter-spacing: .2px;
+}
+
+.text {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: clamp(13px, 1.3vw, 17px);
+}
+
+/* =========================================================
+   8. FOOTER TIME
+   ========================================================= */
+
+.footer-time {
+  position: absolute;
+  left: 50%;
+
+  /* ДВИГАТЬ ВРЕМЯ НА ДЕСКТОПЕ */
+  bottom: 22px;
+
+  transform: translateX(-50%);
+  color: var(--text-faint);
+  font-size: 12px;
+  letter-spacing: .8px;
+  white-space: nowrap;
+  user-select: none;
+  opacity: 0;
+  animation: fadeInBottom 700ms ease-out 2450ms forwards;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  text-align: center;
+}
+
+.footer-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.footer-actions a,
+.footer-actions button {
+  border: 1px solid var(--text-faint);
+  background: transparent;
+  color: var(--text-soft);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+
+.footer-actions a:hover,
+.footer-actions button:hover {
+  color: var(--text-main);
+  border-color: var(--line-main);
+}
+
+.footer-rights {
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: .5px;
+}
+
+/* =========================================================
+   9. ЭФФЕКТЫ ФОНА
+   ========================================================= */
+
+.noise {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  opacity: var(--noise-opacity);
+  background-image:
+    repeating-radial-gradient(circle at 17% 32%, var(--line-main) 0, var(--line-main) 1px, transparent 1px, transparent 4px);
+  mix-blend-mode: normal;
+}
+
+.scanline {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--scanline-color) 0,
+    var(--scanline-color) 1px,
+    transparent 1px,
+    transparent 5px
+  );
+  opacity: var(--scanline-opacity);
+}
+
+/* =========================================================
+   10. АНИМАЦИИ
+   ========================================================= */
+
+@keyframes typeLine1 {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 32ch;
+  }
+}
+
+@keyframes typeLine2 {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 32ch;
+  }
+}
+
+@keyframes caretOff {
+  to {
+    border-right-color: transparent;
+  }
+}
+
+@keyframes showDigit {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes showCursor {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInBrand {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px);
+  }
+
+  to {
+    opacity: .95;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInBottom {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* =========================================================
+   11. ПЛАНШЕТЫ / СРЕДНИЕ ЭКРАНЫ
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .error-label {
+    left: 0;
+  }
+}
+
+/* =========================================================
+   12. МОБИЛКА
+   ========================================================= */
+
+@media (max-width: 700px) {
+  html,
+  body {
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  .page {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    padding: 18px;
+    overflow: hidden;
+  }
+
+  .brand {
+    /* ДВИГАТЬ ЛОГО НА МОБИЛКЕ */
+    top: 34px;
+
+    gap: 7px;
+  }
+
+  .mark {
+    width: 20px;
+    height: 20px;
+    font-size: 13px;
+  }
+
+  .mark::after {
+    width: 8px;
+    bottom: 4px;
+  }
+
+  .brand-name {
+    font-size: 14px;
+  }
+
+  .theme-toggle {
+    /* ДВИГАТЬ КНОПКУ ТЕМЫ НА МОБИЛКЕ */
+    top: 34px;
+    right: 16px;
+
+    bottom: auto;
+    font-size: 10px;
+    padding: 7px 9px;
+  }
+
+  .boot {
+    /* ДВИГАТЬ BOOT-LINE НА МОБИЛКЕ */
+    top: 200px;
+    left: 18px;
+
+    font-size: 10px;
+    opacity: .7;
+  }
+
+  .center {
+    width: 96vw;
+
+    /* ВЫСОТА ЗОНЫ КОДА НА МОБИЛКЕ */
+    height: clamp(170px, 45vw, 260px);
+  }
+
+  .error-label {
+    /* ДВИГАТЬ РАМКУ ERROR/LABEL НА МОБИЛКЕ */
+    top: 5px;
+    left: 2%;
+
+    transform: none;
+    padding: 7px 28px;
+    border-width: 2px;
+  }
+
+  .error {
+    /* РАЗМЕР КОДА НА МОБИЛКЕ */
+    font-size: clamp(140px, 39vw, 260px);
+
+    /* РАССТОЯНИЕ МЕЖДУ ЦИФРАМИ НА МОБИЛКЕ */
+    letter-spacing: -0.075em;
+  }
+
+  .cursor {
+    /* ДВИГАТЬ КУРСОР ВЛЕВО/ВПРАВО НА МОБИЛКЕ */
+    left: calc(100% + 24px);
+
+    /* ДВИГАТЬ КУРСОР ВВЕРХ/ВНИЗ НА МОБИЛКЕ */
+    bottom: clamp(4px, 1vw, 8px);
+
+    /* РАЗМЕР КУРСОРА НА МОБИЛКЕ */
+    width: clamp(42px, 10vw, 70px);
+    height: clamp(9px, 2vw, 14px);
+  }
+
+  .bottom-text {
+    /* ДВИГАТЬ НИЖНИЙ ТЕКСТ НА МОБИЛКЕ */
+    bottom: 176px;
+
+    width: min(92vw, 620px);
+  }
+
+  .footer-time {
+    /* ДВИГАТЬ ВРЕМЯ НА МОБИЛКЕ */
+    bottom: 28px;
+
+    font-size: 10px;
+    gap: 7px;
+  }
+
+  .footer-actions {
+    gap: 7px;
+  }
+
+  .footer-actions a,
+  .footer-actions button {
+    font-size: 9px;
+    padding: 6px 8px;
+  }
+}
+
+/* =========================================================
+   13. ОЧЕНЬ МАЛЕНЬКИЕ ЭКРАНЫ
+   ========================================================= */
+
+@media (max-width: 380px) {
+  .boot {
+    top: 180px;
+  }
+
+  .bottom-text {
+    bottom: 164px;
+  }
+
+  .footer-time {
+    bottom: 22px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+
+  .text {
+    font-size: 12px;
+  }
+}
+
+/* =========================================================
+   14. ЕСЛИ У ПОЛЬЗОВАТЕЛЯ ОТКЛЮЧЕНЫ АНИМАЦИИ
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .brand,
+  .boot-line,
+  .error-label,
+  .digit,
+  .cursor,
+  .bottom-text,
+  .footer-time {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+
+  .boot-line {
+    width: auto;
+    border-right-color: transparent;
+  }
+
+  .digit,
+  .cursor {
+    opacity: 1;
+  }
+}
