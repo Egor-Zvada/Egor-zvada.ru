@@ -80,10 +80,12 @@
     let scrollVelocity = 0;
 
     let cameraVideo = null;
+    let cameraStream = null;
     let cameraPixels = null;
     let cameraFrame = 0;
     let cameraAllowed = false;
     let cameraHasUsefulImage = false;
+    let cameraStarting = false;
 
     const cameraSample = {
       canvas: document.createElement('canvas'),
@@ -173,7 +175,7 @@
     }
 
     function updateCameraFrame() {
-      if (!cameraAllowed || !cameraVideo || cameraVideo.readyState < 2 || !cameraSample.ctx) return;
+      if (!visible || !cameraAllowed || !cameraVideo || cameraVideo.readyState < 2 || !cameraSample.ctx) return;
 
       cameraFrame += 1;
 
@@ -548,6 +550,11 @@
 
     M.createVisibilityController(canvas, (isVisible) => {
       visible = isVisible;
+      if (visible && !document.hidden) {
+        startCamera();
+      } else {
+        stopCamera();
+      }
     });
 
     window.addEventListener('resize', rebuild, { passive: true });
@@ -563,11 +570,21 @@
     startCamera();
 
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && frame) cancelAnimationFrame(frame);
-      if (!document.hidden) start();
+      if (document.hidden) {
+        if (frame) cancelAnimationFrame(frame);
+        stopCamera();
+      }
+
+      if (!document.hidden) {
+        start();
+        if (visible) startCamera();
+      }
     });
 
+    window.addEventListener('pagehide', stopCamera, { passive: true });
+
     async function startCamera() {
+      if (cameraAllowed || cameraStarting) return;
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
 
       cameraSample.canvas.width = cameraSample.width;
@@ -575,6 +592,8 @@
       cameraSample.ctx = cameraSample.canvas.getContext('2d', { willReadFrequently: true });
 
       if (!cameraSample.ctx) return;
+
+      cameraStarting = true;
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -586,18 +605,44 @@
           },
         });
 
+        if (!visible || document.hidden) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        cameraStream = stream;
         cameraVideo = document.createElement('video');
         cameraVideo.muted = true;
         cameraVideo.autoplay = true;
         cameraVideo.playsInline = true;
-        cameraVideo.srcObject = stream;
+        cameraVideo.srcObject = cameraStream;
 
         await cameraVideo.play();
 
         cameraAllowed = true;
       } catch (error) {
         cameraAllowed = false;
+      } finally {
+        cameraStarting = false;
       }
+    }
+
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+      }
+
+      if (cameraVideo) {
+        cameraVideo.pause();
+        cameraVideo.srcObject = null;
+      }
+
+      cameraStream = null;
+      cameraVideo = null;
+      cameraPixels = null;
+      cameraFrame = 0;
+      cameraAllowed = false;
+      cameraHasUsefulImage = false;
     }
   }
 

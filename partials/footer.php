@@ -9,7 +9,7 @@
     </div>
 
     <div class="site-footer__meta">
-      <p class="site-footer__copy">© <?= date('Y') ?> Егор Звада. Все права защищены.</p>
+      <p class="site-footer__copy">Егор Звада™</p>
       <button class="site-footer__version" type="button" data-admin-trigger data-admin-clicks="<?= htmlspecialchars((string) ($siteSettings['admin_clicks'] ?? 10), ENT_QUOTES, 'UTF-8') ?>" aria-label="Версия сайта">
         &gt; build: <?= htmlspecialchars($pageVersion ?? '0.2-beta', ENT_QUOTES, 'UTF-8') ?>
       </button>
