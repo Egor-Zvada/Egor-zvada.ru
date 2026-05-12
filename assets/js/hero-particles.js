@@ -41,7 +41,7 @@
 
       // Общая яркость в режиме камеры.
       cameraOpacityDark: 0.58,
-      cameraOpacityLight: 0.38,
+      cameraOpacityLight: 0.62,
 
       // Размер точек.
       pointBaseSizeDesktop: 2.55,
@@ -117,7 +117,8 @@
       return { particles: CONFIG.particlesHigh, dpr: 1.15, speed: 1 };
     };
 
-    const particleColor = () => (M.isLightTheme() ? 0x5f625f : 0xffffff);
+    const particleColor = () => (M.isLightTheme() ? 0x252826 : 0xffffff);
+    const particleBlending = () => (M.isLightTheme() ? THREE.NormalBlending : THREE.AdditiveBlending);
 
     function updateScrollVelocity() {
       const current = window.scrollY;
@@ -410,7 +411,7 @@
 
       const pointMaterial = new THREE.ShaderMaterial({
         transparent: true,
-        blending: THREE.AdditiveBlending,
+        blending: particleBlending(),
         depthWrite: false,
         uniforms: {
           uColor: { value: new THREE.Color(particleColor()) },
@@ -511,6 +512,7 @@
       pointMesh.material.uniforms.uOpacity.value = M.isLightTheme()
         ? CONFIG.cameraOpacityLight
         : CONFIG.cameraOpacityDark;
+      pointMesh.material.blending = particleBlending();
 
       updateGeometry(time);
       renderer.render(scene, camera);
@@ -678,7 +680,7 @@
 
     function particleInk(alpha) {
       return M.isLightTheme()
-        ? `rgba(72, 75, 72, ${alpha})`
+        ? `rgba(34, 37, 35, ${alpha})`
         : `rgba(255, 255, 255, ${alpha})`;
     }
 
@@ -820,7 +822,7 @@
       const mapped = points.map(project);
 
       ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalCompositeOperation = M.isLightTheme() ? 'source-over' : 'lighter';
 
       for (let y = 0; y < rows; y += 1) {
         ctx.beginPath();
@@ -834,9 +836,13 @@
 
         const isGuide = y % 6 === 0;
 
-        ctx.strokeStyle = isGuide ? particleInk(0.18) : particleInk(0.08);
+        ctx.strokeStyle = isGuide
+          ? particleInk(M.isLightTheme() ? 0.24 : 0.18)
+          : particleInk(M.isLightTheme() ? 0.12 : 0.08);
         ctx.lineWidth = isGuide ? 1.1 : 0.6;
-        ctx.globalAlpha = isGuide ? 0.36 : 0.22;
+        ctx.globalAlpha = isGuide
+          ? (M.isLightTheme() ? 0.48 : 0.36)
+          : (M.isLightTheme() ? 0.32 : 0.22);
         ctx.stroke();
       }
 
@@ -850,13 +856,13 @@
           else ctx.lineTo(p.x, p.y);
         }
 
-        ctx.strokeStyle = particleInk(0.07);
+        ctx.strokeStyle = particleInk(M.isLightTheme() ? 0.11 : 0.07);
         ctx.lineWidth = 0.55;
-        ctx.globalAlpha = 0.18;
+        ctx.globalAlpha = M.isLightTheme() ? 0.28 : 0.18;
         ctx.stroke();
       }
 
-      ctx.fillStyle = particleInk(0.5);
+      ctx.fillStyle = particleInk(M.isLightTheme() ? 0.62 : 0.5);
 
       for (let i = 0; i < mapped.length; i += level === 'low' ? 11 : 7) {
         const p = mapped[i];
@@ -864,7 +870,9 @@
 
         if (pulse < 0.34) continue;
 
-        ctx.globalAlpha = 0.10 + pulse * 0.26;
+        ctx.globalAlpha = M.isLightTheme()
+          ? 0.16 + pulse * 0.34
+          : 0.10 + pulse * 0.26;
         ctx.beginPath();
         ctx.arc(p.x, p.y, 0.4 + pulse * 0.75, 0, Math.PI * 2);
         ctx.fill();
