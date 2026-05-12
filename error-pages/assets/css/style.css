@@ -444,6 +444,7 @@ body {
   position: fixed;
   top: 18px;
   right: 104px;
+  z-index: 20;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -475,6 +476,7 @@ body {
   position: fixed;
   left: 22px;
   bottom: 24px;
+  z-index: 20;
   color: var(--text-faint);
   font-size: 10px;
   letter-spacing: .5px;
