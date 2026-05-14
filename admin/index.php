@@ -81,6 +81,69 @@ function redirect_admin(string $tab = 'skills', string $message = ''): void {
   exit;
 }
 
+function redirect_admin_project(int $index, string $message = ''): void {
+  $url = '/admin/?tab=projects&edit_project=' . $index;
+  if ($message !== '') {
+    $url .= '&message=' . urlencode($message);
+  }
+  header('Location: ' . $url);
+  exit;
+}
+
+function size_from_ini(string $value): int {
+  $value = trim($value);
+  if ($value === '') {
+    return 0;
+  }
+
+  $unit = strtolower($value[strlen($value) - 1]);
+  $size = (float) $value;
+
+  return match ($unit) {
+    'g' => (int) ($size * 1024 * 1024 * 1024),
+    'm' => (int) ($size * 1024 * 1024),
+    'k' => (int) ($size * 1024),
+    default => (int) $size,
+  };
+}
+
+function human_size(int $bytes): string {
+  if ($bytes >= 1024 * 1024 * 1024) {
+    return round($bytes / 1024 / 1024 / 1024, 1) . ' ГБ';
+  }
+
+  if ($bytes >= 1024 * 1024) {
+    return round($bytes / 1024 / 1024, 1) . ' МБ';
+  }
+
+  if ($bytes >= 1024) {
+    return round($bytes / 1024, 1) . ' КБ';
+  }
+
+  return $bytes . ' Б';
+}
+
+function assert_post_was_parsed(string $action): void {
+  if ($action !== '' || ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    return;
+  }
+
+  $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+  if ($contentLength <= 0 || !empty($_POST) || !empty($_FILES)) {
+    return;
+  }
+
+  $postMax = size_from_ini((string) ini_get('post_max_size'));
+  $uploadMax = size_from_ini((string) ini_get('upload_max_filesize'));
+  $limit = $postMax > 0 ? human_size($postMax) : (string) ini_get('post_max_size');
+
+  throw new RuntimeException(
+    'Сервер не принял загрузку: общий размер запроса ' . human_size($contentLength)
+    . ' больше лимита PHP post_max_size ' . $limit
+    . '. Сейчас upload_max_filesize: ' . ($uploadMax > 0 ? human_size($uploadMax) : (string) ini_get('upload_max_filesize')) . '.'
+  );
+}
+
 function load_items(string $file): array {
   if (in_array(basename($file), ['skills.php', 'projects.php'], true)) {
     return ez_load_items_for_file($file);
@@ -284,6 +347,17 @@ function validate_svg_upload(string $tmpName): void {
   }
 }
 
+function upload_error_message(int $errorCode): string {
+  return match ($errorCode) {
+    UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Файл больше лимита сервера. Проверь upload_max_filesize, post_max_size и client_max_body_size.',
+    UPLOAD_ERR_PARTIAL => 'Файл загрузился не полностью. Попробуй ещё раз.',
+    UPLOAD_ERR_NO_TMP_DIR => 'На сервере нет временной папки для загрузок.',
+    UPLOAD_ERR_CANT_WRITE => 'Сервер не смог записать файл на диск.',
+    UPLOAD_ERR_EXTENSION => 'PHP-расширение остановило загрузку файла.',
+    default => 'Ошибка загрузки файла.',
+  };
+}
+
 function save_upload(
   string $field,
   string $uploadFsDir,
@@ -291,7 +365,8 @@ function save_upload(
   string $fallback = '',
   bool $allowVideo = false,
   ?string $videoUploadFsDir = null,
-  ?string $videoUploadWebDir = null
+  ?string $videoUploadWebDir = null,
+  int $maxImageSize = 8 * 1024 * 1024
 ): string {
   if (empty($_FILES[$field]) || ($_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
     return $fallback;
@@ -299,12 +374,7 @@ function save_upload(
 
   $file = $_FILES[$field];
   if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
-    throw new RuntimeException('Ошибка загрузки файла.');
-  }
-
-  $maxSize = $allowVideo ? 80 * 1024 * 1024 : 8 * 1024 * 1024;
-  if (($file['size'] ?? 0) > $maxSize) {
-    throw new RuntimeException('Файл слишком большой. Максимум ' . ($allowVideo ? '80' : '8') . ' МБ.');
+    throw new RuntimeException(upload_error_message((int) ($file['error'] ?? UPLOAD_ERR_OK)));
   }
 
   $tmpName = (string) $file['tmp_name'];
@@ -321,7 +391,13 @@ function save_upload(
       : 'Можно загружать только изображения: jpg, png, webp, gif, svg.');
   }
 
-  if (in_array($extension, $videoExtensions, true)) {
+  $isVideo = in_array($extension, $videoExtensions, true);
+  $maxSize = $isVideo && $allowVideo ? 80 * 1024 * 1024 : $maxImageSize;
+  if (($file['size'] ?? 0) > $maxSize) {
+    throw new RuntimeException('Файл слишком большой. Максимум ' . human_size($maxSize) . '.');
+  }
+
+  if ($isVideo) {
     $mime = '';
     if (function_exists('finfo_open')) {
       $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -344,7 +420,7 @@ function save_upload(
 
   $targetFsDir = $uploadFsDir;
   $targetWebDir = $uploadWebDir;
-  if (in_array($extension, $videoExtensions, true) && $allowVideo) {
+  if ($isVideo && $allowVideo) {
     $targetFsDir = $videoUploadFsDir ?: $uploadFsDir;
     $targetWebDir = $videoUploadWebDir ?: $uploadWebDir;
   }
@@ -370,7 +446,8 @@ function save_multiple_uploads(
   string $uploadWebDir,
   bool $allowVideo = false,
   ?string $videoUploadFsDir = null,
-  ?string $videoUploadWebDir = null
+  ?string $videoUploadWebDir = null,
+  int $maxImageSize = 8 * 1024 * 1024
 ): array {
   if (empty($_FILES[$field]) || !is_array($_FILES[$field]['name'])) {
     return [];
@@ -397,12 +474,61 @@ function save_multiple_uploads(
       '',
       $allowVideo,
       $videoUploadFsDir,
-      $videoUploadWebDir
+      $videoUploadWebDir,
+      $maxImageSize
     );
     unset($_FILES['_single_gallery_upload']);
   }
 
   return $saved;
+}
+
+function normalize_project_media(array $project, array $deletedGallery = []): array {
+  $defaultImage = ez_default_project_image_path();
+  $project['default_image'] = $defaultImage;
+  $project['gallery'] = array_values(array_unique(array_filter($project['gallery'] ?? [])));
+
+  $hasUploadedProjectMedia = false;
+  foreach ($project['gallery'] as $galleryItem) {
+    if (is_uploaded_asset((string) $galleryItem)) {
+      $hasUploadedProjectMedia = true;
+      break;
+    }
+  }
+
+  if ($hasUploadedProjectMedia) {
+    $project['gallery'] = array_values(array_filter($project['gallery'], static function ($path) {
+      return !is_project_placeholder_asset((string) $path);
+    }));
+  }
+
+  $deletedGallery = array_values(array_filter($deletedGallery, 'is_string'));
+  $imageCandidates = array_values(array_filter($project['gallery'], static fn($path) => !is_video_asset((string) $path)));
+  $currentImage = (string) ($project['image'] ?? '');
+
+  if ($currentImage === '' || is_project_placeholder_asset($currentImage) || in_array($currentImage, $deletedGallery, true) || !in_array($currentImage, $imageCandidates, true)) {
+    $project['image'] = $imageCandidates[0] ?? $defaultImage;
+  }
+
+  $videoCandidates = array_values(array_filter($project['gallery'], static fn($path) => is_video_asset((string) $path)));
+  $currentVideo = (string) ($project['video'] ?? '');
+  $project['video'] = $currentVideo !== '' && !in_array($currentVideo, $deletedGallery, true) && in_array($currentVideo, $videoCandidates, true)
+    ? $currentVideo
+    : ($videoCandidates[0] ?? null);
+
+  if ($project['image'] !== '' && !is_default_project_image($project['image']) && !in_array($project['image'], $project['gallery'], true)) {
+    array_unshift($project['gallery'], $project['image']);
+  }
+
+  if (!empty($project['video']) && !in_array($project['video'], $project['gallery'], true)) {
+    $project['gallery'][] = $project['video'];
+  }
+
+  if (empty($project['gallery'])) {
+    $project['gallery'] = [$project['image']];
+  }
+
+  return $project;
 }
 
 function require_login(): void {
@@ -418,6 +544,7 @@ $error = '';
 try {
   if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+    assert_post_was_parsed(is_string($action) ? $action : '');
 
     if ($action === 'login') {
       $username = trim((string) ($_POST['username'] ?? ''));
@@ -509,13 +636,23 @@ try {
         $GLOBALS['projectUploadWebDir'],
         true,
         $GLOBALS['projectVideoUploadFsDir'],
-        $GLOBALS['projectVideoUploadWebDir']
+        $GLOBALS['projectVideoUploadWebDir'],
+        40 * 1024 * 1024
       );
       $oldImage = (string) ($old['image'] ?? '');
       $oldVideo = (string) ($old['video'] ?? '');
       $defaultImage = ez_default_project_image_path();
       $selectedImage = trim((string) ($_POST['primary_image'] ?? ''));
-      $imageUpload = save_upload('image_upload', $GLOBALS['projectUploadFsDir'], $GLOBALS['projectUploadWebDir']);
+      $imageUpload = save_upload(
+        'image_upload',
+        $GLOBALS['projectUploadFsDir'],
+        $GLOBALS['projectUploadWebDir'],
+        '',
+        false,
+        null,
+        null,
+        40 * 1024 * 1024
+      );
       $videoUpload = save_upload(
         'video_upload',
         $GLOBALS['projectUploadFsDir'],
@@ -558,20 +695,6 @@ try {
         throw new RuntimeException('У проекта должно быть название.');
       }
 
-      $hasUploadedProjectMedia = $imageUpload !== '' || $videoUpload !== '';
-      foreach ($item['gallery'] as $galleryImage) {
-        if (is_uploaded_asset((string) $galleryImage)) {
-          $hasUploadedProjectMedia = true;
-          break;
-        }
-      }
-
-      if ($hasUploadedProjectMedia) {
-        $item['gallery'] = array_values(array_filter($item['gallery'], static function ($path) {
-          return !is_project_placeholder_asset((string) $path);
-        }));
-      }
-
       $imageCandidates = array_values(array_filter($item['gallery'], static fn($path) => !is_video_asset((string) $path)));
       if ($imageUpload !== '') {
         $item['image'] = $imageUpload;
@@ -592,16 +715,7 @@ try {
         $item['video'] = $videoCandidates[0] ?? null;
       }
 
-      if ($item['image'] !== '' && !is_default_project_image($item['image']) && !in_array($item['image'], $item['gallery'], true)) {
-        array_unshift($item['gallery'], $item['image']);
-      }
-      if (!empty($item['video']) && !in_array($item['video'], $item['gallery'], true)) {
-        $item['gallery'][] = $item['video'];
-      }
-
-      if (empty($item['gallery'])) {
-        $item['gallery'] = [$item['image']];
-      }
+      $item = normalize_project_media($item, (array) $deletedGallery);
 
       if ($index === null) {
         $projects[] = $item;
@@ -611,6 +725,50 @@ try {
 
       save_items($GLOBALS['projectsFile'], $projects);
       redirect_admin('projects', 'Проект сохранён.');
+    } elseif ($action === 'upload_project_media') {
+      require_login();
+      check_csrf();
+
+      $projects = load_items($GLOBALS['projectsFile']);
+      $index = (int) ($_POST['index'] ?? -1);
+      if (!isset($projects[$index])) {
+        throw new RuntimeException('Сначала сохрани проект, потом загружай в него медиа.');
+      }
+
+      $uploadedMedia = save_multiple_uploads(
+        'project_media_uploads',
+        $GLOBALS['projectUploadFsDir'],
+        $GLOBALS['projectUploadWebDir'],
+        true,
+        $GLOBALS['projectVideoUploadFsDir'],
+        $GLOBALS['projectVideoUploadWebDir'],
+        40 * 1024 * 1024
+      );
+
+      if (empty($uploadedMedia)) {
+        throw new RuntimeException('Выбери фото или видео для загрузки.');
+      }
+
+      $project = $projects[$index];
+      $project['gallery'] = array_values(array_unique(array_filter(array_merge(
+        $project['gallery'] ?? [],
+        $uploadedMedia
+      ))));
+
+      $imageCandidates = array_values(array_filter($uploadedMedia, static fn($path) => !is_video_asset((string) $path)));
+      $videoCandidates = array_values(array_filter($uploadedMedia, static fn($path) => is_video_asset((string) $path)));
+
+      if (!empty($imageCandidates) && (empty($project['image']) || is_project_placeholder_asset((string) $project['image']))) {
+        $project['image'] = $imageCandidates[0];
+      }
+
+      if (!empty($videoCandidates) && empty($project['video'])) {
+        $project['video'] = $videoCandidates[0];
+      }
+
+      $projects[$index] = normalize_project_media($project);
+      save_items($GLOBALS['projectsFile'], $projects);
+      redirect_admin_project($index, 'Медиа проекта загружены.');
     } elseif ($action === 'delete_project') {
       require_login();
       check_csrf();
@@ -777,6 +935,10 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
     .file-list__empty { padding: 14px; border: 1px dashed var(--line); color: var(--muted); background: var(--field); }
     .upload-preview { display: grid; gap: 8px; margin: -4px 0 12px; }
     .upload-preview:empty { display: none; }
+    .media-dropzone { display: grid; gap: 8px; padding: 16px; border: 1px dashed var(--line); background: var(--field); color: var(--muted); cursor: pointer; }
+    .media-dropzone strong { color: var(--text); }
+    .media-dropzone input { margin-top: 4px; }
+    .media-dropzone.is-dragover { border-color: var(--text); background: var(--soft); color: var(--text); }
     form { margin: 0; }
     label { display: grid; gap: 6px; margin-bottom: 12px; color: var(--muted); font-size: 13px; }
     input, textarea, select { width: 100%; border: 1px solid var(--line); background: var(--field); color: var(--text); padding: 10px 12px; font: inherit; }
@@ -1096,7 +1258,11 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               <?php else: ?>
                 <div class="file-list__empty">Медиа пока не загружены. Будет показана дефолтная картинка проекта.</div>
               <?php endif; ?>
-              <label>Дозагрузить фото/видео в галерею <input name="gallery_uploads[]" type="file" accept="image/*,.svg,video/mp4,video/webm,video/quicktime,.mov,.m4v" multiple></label>
+              <label class="media-dropzone" data-dropzone>
+                <strong>Дозагрузить фото/видео в галерею</strong>
+                <span>Можно выбрать файлы или перетащить их сюда. Эти файлы сохранятся вместе с кнопкой "Сохранить проект".</span>
+                <input name="gallery_uploads[]" type="file" accept="image/*,.svg,video/mp4,video/webm,video/quicktime,.mov,.m4v" multiple>
+              </label>
               <div class="upload-preview" data-upload-preview></div>
               <label>Загрузить видео <input name="video_upload" type="file" accept="video/mp4,video/webm,video/quicktime,.mov,.m4v"></label>
               <div class="upload-preview" data-upload-preview></div>
@@ -1116,6 +1282,22 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                 <?php if ($editProject): ?><a class="button" href="/admin/?tab=projects">Добавить новый</a><?php endif; ?>
               </div>
             </form>
+            <?php if ($editProject): ?>
+              <form method="post" action="/admin/?tab=projects&edit_project=<?= h($editProjectIndex) ?>" enctype="multipart/form-data" class="media-upload-form">
+                <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
+                <input type="hidden" name="action" value="upload_project_media">
+                <input type="hidden" name="index" value="<?= h($editProjectIndex) ?>">
+                <label class="media-dropzone" data-dropzone>
+                  <strong>Быстро загрузить медиа проекта</strong>
+                  <span>Перетащи сюда фото/видео или выбери файлы. Текст проекта не трогаем.</span>
+                  <input name="project_media_uploads[]" type="file" accept="image/*,.svg,video/mp4,video/webm,video/quicktime,.mov,.m4v" multiple>
+                </label>
+                <div class="upload-preview" data-upload-preview></div>
+                <div class="form-actions">
+                  <button class="primary" type="submit">Загрузить медиа</button>
+                </div>
+              </form>
+            <?php endif; ?>
           </section>
         </div>
       <?php else: ?>
@@ -1324,6 +1506,35 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
       document.addEventListener('change', (event) => {
         const input = event.target.closest('input[type="file"]');
         if (input) renderPreview(input);
+      });
+
+      document.addEventListener('dragover', (event) => {
+        const zone = event.target.closest('[data-dropzone]');
+        if (!zone) return;
+
+        event.preventDefault();
+        zone.classList.add('is-dragover');
+      });
+
+      document.addEventListener('dragleave', (event) => {
+        const zone = event.target.closest('[data-dropzone]');
+        if (!zone || zone.contains(event.relatedTarget)) return;
+
+        zone.classList.remove('is-dragover');
+      });
+
+      document.addEventListener('drop', (event) => {
+        const zone = event.target.closest('[data-dropzone]');
+        if (!zone) return;
+
+        event.preventDefault();
+        zone.classList.remove('is-dragover');
+
+        const input = zone.querySelector('input[type="file"]');
+        if (!input || !event.dataTransfer?.files?.length) return;
+
+        input.files = event.dataTransfer.files;
+        renderPreview(input);
       });
     })();
 
