@@ -81,15 +81,6 @@ function redirect_admin(string $tab = 'skills', string $message = ''): void {
   exit;
 }
 
-function redirect_admin_project(int $index, string $message = ''): void {
-  $url = '/admin/?tab=projects&edit_project=' . $index;
-  if ($message !== '') {
-    $url .= '&message=' . urlencode($message);
-  }
-  header('Location: ' . $url);
-  exit;
-}
-
 function size_from_ini(string $value): int {
   $value = trim($value);
   if ($value === '') {
@@ -504,11 +495,7 @@ function normalize_project_media(array $project, array $deletedGallery = []): ar
 
   $deletedGallery = array_values(array_filter($deletedGallery, 'is_string'));
   $imageCandidates = array_values(array_filter($project['gallery'], static fn($path) => !is_video_asset((string) $path)));
-  $currentImage = (string) ($project['image'] ?? '');
-
-  if ($currentImage === '' || is_project_placeholder_asset($currentImage) || in_array($currentImage, $deletedGallery, true) || !in_array($currentImage, $imageCandidates, true)) {
-    $project['image'] = $imageCandidates[0] ?? $defaultImage;
-  }
+  $project['image'] = $imageCandidates[0] ?? $defaultImage;
 
   $videoCandidates = array_values(array_filter($project['gallery'], static fn($path) => is_video_asset((string) $path)));
   $currentVideo = (string) ($project['video'] ?? '');
@@ -639,29 +626,8 @@ try {
         $GLOBALS['projectVideoUploadWebDir'],
         40 * 1024 * 1024
       );
-      $oldImage = (string) ($old['image'] ?? '');
       $oldVideo = (string) ($old['video'] ?? '');
       $defaultImage = ez_default_project_image_path();
-      $selectedImage = trim((string) ($_POST['primary_image'] ?? ''));
-      $imageUpload = save_upload(
-        'image_upload',
-        $GLOBALS['projectUploadFsDir'],
-        $GLOBALS['projectUploadWebDir'],
-        '',
-        false,
-        null,
-        null,
-        40 * 1024 * 1024
-      );
-      $videoUpload = save_upload(
-        'video_upload',
-        $GLOBALS['projectUploadFsDir'],
-        $GLOBALS['projectUploadWebDir'],
-        '',
-        true,
-        $GLOBALS['projectVideoUploadFsDir'],
-        $GLOBALS['projectVideoUploadWebDir']
-      );
 
       $tagsData = load_assoc($GLOBALS['tagsFile']);
       $projectCategories = $tagsData['project_categories'] ?? [];
@@ -679,9 +645,7 @@ try {
         'default_image' => $defaultImage,
         'gallery' => array_values(array_unique(array_filter(array_merge(
           $existingGallery,
-          $uploadedGallery,
-          $imageUpload !== '' ? [$imageUpload] : [],
-          $videoUpload !== '' ? [$videoUpload] : []
+          $uploadedGallery
         )))),
         'video' => null,
         'tags' => array_values(array_unique(array_merge(
@@ -696,20 +660,10 @@ try {
       }
 
       $imageCandidates = array_values(array_filter($item['gallery'], static fn($path) => !is_video_asset((string) $path)));
-      if ($imageUpload !== '') {
-        $item['image'] = $imageUpload;
-      } elseif ($selectedImage !== '' && in_array($selectedImage, $imageCandidates, true)) {
-        $item['image'] = $selectedImage;
-      } elseif ($oldImage !== '' && !in_array($oldImage, (array) $deletedGallery, true) && in_array($oldImage, $imageCandidates, true)) {
-        $item['image'] = $oldImage;
-      } else {
-        $item['image'] = $imageCandidates[0] ?? $defaultImage;
-      }
+      $item['image'] = $imageCandidates[0] ?? $defaultImage;
 
       $videoCandidates = array_values(array_filter($item['gallery'], static fn($path) => is_video_asset((string) $path)));
-      if ($videoUpload !== '') {
-        $item['video'] = $videoUpload;
-      } elseif ($oldVideo !== '' && !in_array($oldVideo, (array) $deletedGallery, true) && in_array($oldVideo, $videoCandidates, true)) {
+      if ($oldVideo !== '' && !in_array($oldVideo, (array) $deletedGallery, true) && in_array($oldVideo, $videoCandidates, true)) {
         $item['video'] = $oldVideo;
       } else {
         $item['video'] = $videoCandidates[0] ?? null;
@@ -725,50 +679,6 @@ try {
 
       save_items($GLOBALS['projectsFile'], $projects);
       redirect_admin('projects', 'Проект сохранён.');
-    } elseif ($action === 'upload_project_media') {
-      require_login();
-      check_csrf();
-
-      $projects = load_items($GLOBALS['projectsFile']);
-      $index = (int) ($_POST['index'] ?? -1);
-      if (!isset($projects[$index])) {
-        throw new RuntimeException('Сначала сохрани проект, потом загружай в него медиа.');
-      }
-
-      $uploadedMedia = save_multiple_uploads(
-        'project_media_uploads',
-        $GLOBALS['projectUploadFsDir'],
-        $GLOBALS['projectUploadWebDir'],
-        true,
-        $GLOBALS['projectVideoUploadFsDir'],
-        $GLOBALS['projectVideoUploadWebDir'],
-        40 * 1024 * 1024
-      );
-
-      if (empty($uploadedMedia)) {
-        throw new RuntimeException('Выбери фото или видео для загрузки.');
-      }
-
-      $project = $projects[$index];
-      $project['gallery'] = array_values(array_unique(array_filter(array_merge(
-        $project['gallery'] ?? [],
-        $uploadedMedia
-      ))));
-
-      $imageCandidates = array_values(array_filter($uploadedMedia, static fn($path) => !is_video_asset((string) $path)));
-      $videoCandidates = array_values(array_filter($uploadedMedia, static fn($path) => is_video_asset((string) $path)));
-
-      if (!empty($imageCandidates) && (empty($project['image']) || is_project_placeholder_asset((string) $project['image']))) {
-        $project['image'] = $imageCandidates[0];
-      }
-
-      if (!empty($videoCandidates) && empty($project['video'])) {
-        $project['video'] = $videoCandidates[0];
-      }
-
-      $projects[$index] = normalize_project_media($project);
-      save_items($GLOBALS['projectsFile'], $projects);
-      redirect_admin_project($index, 'Медиа проекта загружены.');
     } elseif ($action === 'delete_project') {
       require_login();
       check_csrf();
@@ -980,7 +890,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
       .panel-head, .form-actions { align-items: stretch; flex-direction: column; }
       .panel-head .button, .form-actions .button, .form-actions button { width: 100%; }
       .file-list__item { grid-template-columns: 72px 1fr; }
-      .file-list__item .check, .file-list__item .media-choice { grid-column: 1 / -1; }
+      .file-list__item .check { grid-column: 1 / -1; }
       .tag-manager__add, .category-row { grid-template-columns: 1fr; }
       .panel { padding: 14px; }
     }
@@ -1220,8 +1130,6 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               <label>Название категории <input name="category_label" value="<?= h($editProject['category_label'] ?? '') ?>" placeholder="event tech"></label>
               <label>Краткое описание <textarea name="description" required><?= h($editProject['description'] ?? '') ?></textarea></label>
               <label>Полное описание <textarea name="full_description"><?= h($editProject['full_description'] ?? '') ?></textarea></label>
-              <label>Загрузить главную картинку <input name="image_upload" type="file" accept="image/*,.svg"></label>
-              <div class="upload-preview" data-upload-preview></div>
               <?php
                 $projectGallery = array_values($editProject['gallery'] ?? []);
                 $projectImage = (string) ($editProject['image'] ?? '');
@@ -1231,6 +1139,13 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                 }
                 if ($projectVideo !== '' && !in_array($projectVideo, $projectGallery, true)) {
                   $projectGallery[] = $projectVideo;
+                }
+                $firstProjectImage = '';
+                foreach ($projectGallery as $galleryMedia) {
+                  if (!is_video_asset((string) $galleryMedia)) {
+                    $firstProjectImage = (string) $galleryMedia;
+                    break;
+                  }
                 }
               ?>
               <?php if (!empty($projectGallery)): ?>
@@ -1245,7 +1160,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                       <span class="file-list__body">
                         <strong><?= is_video_asset((string) $image) ? 'Видео' : 'Фото' ?> <?= $mediaIndex + 1 ?></strong>
                         <?php if (!is_video_asset((string) $image)): ?>
-                          <span class="media-choice"><input name="primary_image" type="radio" value="<?= h($image) ?>" <?= ($projectImage === $image || ($projectImage === '' && $mediaIndex === 0)) ? 'checked' : '' ?>> Главная картинка</span>
+                          <span class="file-list__meta"><?= $firstProjectImage === (string) $image ? 'Главная картинка' : 'Фото в галерее' ?></span>
                         <?php else: ?>
                           <span class="file-list__meta">Видео в галерее</span>
                         <?php endif; ?>
@@ -1259,12 +1174,10 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                 <div class="file-list__empty">Медиа пока не загружены. Будет показана дефолтная картинка проекта.</div>
               <?php endif; ?>
               <label class="media-dropzone" data-dropzone>
-                <strong>Дозагрузить фото/видео в галерею</strong>
-                <span>Можно выбрать файлы или перетащить их сюда. Эти файлы сохранятся вместе с кнопкой "Сохранить проект".</span>
+                <strong>Медиа проекта</strong>
+                <span>Перетащи сюда фото/видео или выбери файлы. Первая фотография в списке станет главной.</span>
                 <input name="gallery_uploads[]" type="file" accept="image/*,.svg,video/mp4,video/webm,video/quicktime,.mov,.m4v" multiple>
               </label>
-              <div class="upload-preview" data-upload-preview></div>
-              <label>Загрузить видео <input name="video_upload" type="file" accept="video/mp4,video/webm,video/quicktime,.mov,.m4v"></label>
               <div class="upload-preview" data-upload-preview></div>
               <label>Теги из списка</label>
               <div class="tag-picker" aria-label="Теги проекта">
@@ -1282,22 +1195,6 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                 <?php if ($editProject): ?><a class="button" href="/admin/?tab=projects">Добавить новый</a><?php endif; ?>
               </div>
             </form>
-            <?php if ($editProject): ?>
-              <form method="post" action="/admin/?tab=projects&edit_project=<?= h($editProjectIndex) ?>" enctype="multipart/form-data" class="media-upload-form">
-                <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
-                <input type="hidden" name="action" value="upload_project_media">
-                <input type="hidden" name="index" value="<?= h($editProjectIndex) ?>">
-                <label class="media-dropzone" data-dropzone>
-                  <strong>Быстро загрузить медиа проекта</strong>
-                  <span>Перетащи сюда фото/видео или выбери файлы. Текст проекта не трогаем.</span>
-                  <input name="project_media_uploads[]" type="file" accept="image/*,.svg,video/mp4,video/webm,video/quicktime,.mov,.m4v" multiple>
-                </label>
-                <div class="upload-preview" data-upload-preview></div>
-                <div class="form-actions">
-                  <button class="primary" type="submit">Загрузить медиа</button>
-                </div>
-              </form>
-            <?php endif; ?>
           </section>
         </div>
       <?php else: ?>
