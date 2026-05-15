@@ -664,7 +664,7 @@
   object-fit: cover;
   object-position: center;
   transform: scale(1);
-  filter: saturate(.85) brightness(.75) contrast(1.05);
+  filter: none;
   transition: transform var(--transition-slow), filter var(--transition-slow);
 }
 .project-media__image[hidden],
@@ -674,13 +674,13 @@
 .project-card:hover .project-media__image,
 .project-card:hover .project-media__video {
   transform: scale(1.04);
-  filter: saturate(.82) brightness(.62) contrast(1.1);
+  filter: none;
 }
 .project-card.is-open .project-media::after { opacity: .06; }
 .project-card.is-open .project-media__image,
 .project-card.is-open .project-media__video {
   transform: scale(1.06);
-  filter: saturate(1) brightness(1) contrast(1);
+  filter: none;
 }
 .project-media__controls {
   position: absolute;
