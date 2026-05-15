@@ -648,14 +648,7 @@
   background: var(--color-bg);
 }
 .project-media::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background:
-    linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.72)),
-    linear-gradient(90deg, rgba(0,0,0,.42), transparent 52%);
-  transition: opacity var(--transition), background var(--transition);
+  display: none;
 }
 .project-media__image,
 .project-media__video {
@@ -676,7 +669,7 @@
   transform: scale(1.04);
   filter: none;
 }
-.project-card.is-open .project-media::after { opacity: .06; }
+/* .project-media::after removed */
 .project-card.is-open .project-media__image,
 .project-card.is-open .project-media__video {
   transform: scale(1.06);
