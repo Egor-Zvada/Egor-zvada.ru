@@ -51,7 +51,7 @@ $hiddenCount = max(0, count($projects) - 4);
         <?php
           $title = htmlspecialchars($project['title'], ENT_QUOTES, 'UTF-8');
           $description = htmlspecialchars($project['description'], ENT_QUOTES, 'UTF-8');
-          $fullDescription = htmlspecialchars($project['full_description'] ?? $project['description'], ENT_QUOTES, 'UTF-8');
+          $fullDescription = nl2br(htmlspecialchars($project['full_description'] ?? $project['description'], ENT_QUOTES, 'UTF-8'));
           $category = htmlspecialchars($project['category'], ENT_QUOTES, 'UTF-8');
           $categoryLabel = htmlspecialchars($project['category_label'] ?? $project['category'], ENT_QUOTES, 'UTF-8');
           $rawImage = $project['image'] ?? '';

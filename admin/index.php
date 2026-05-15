@@ -659,6 +659,14 @@ try {
         throw new RuntimeException('У проекта должно быть название.');
       }
 
+      // Reorder gallery so chosen main photo is first
+      $mainImage = trim((string) ($_POST['main_image'] ?? ''));
+      if ($mainImage !== '' && in_array($mainImage, $item['gallery'], true) && !is_video_asset($mainImage)) {
+        $item['gallery'] = array_values(array_merge(
+          [$mainImage],
+          array_filter($item['gallery'], static fn($p) => $p !== $mainImage)
+        ));
+      }
       $imageCandidates = array_values(array_filter($item['gallery'], static fn($path) => !is_video_asset((string) $path)));
       $item['image'] = $imageCandidates[0] ?? $defaultImage;
 
@@ -1151,7 +1159,7 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
               <?php if (!empty($projectGallery)): ?>
                 <div class="file-list" aria-label="Текущая галерея проекта">
                   <?php foreach ($projectGallery as $mediaIndex => $image): ?>
-                    <label class="file-list__item">
+                    <div class="file-list__item">
                       <?php if (is_video_asset((string) $image)): ?>
                         <span class="file-list__video-thumb">video</span>
                       <?php else: ?>
@@ -1166,8 +1174,15 @@ $editSkillInvertIcon = (bool) ($editSkill['invert_icon'] ?? !is_uploaded_asset($
                         <?php endif; ?>
                       </span>
                       <input type="hidden" name="gallery_existing[]" value="<?= h($image) ?>">
-                      <span class="check"><input name="delete_gallery[]" type="checkbox" value="<?= h($image) ?>" <?= !is_uploaded_asset((string) $image) ? 'disabled' : '' ?>> Удалить</span>
-                    </label>
+                      <div style="display:grid;gap:4px">
+                        <?php if (!is_video_asset((string) $image) && is_uploaded_asset((string) $image)): ?>
+                          <label class="check"><input type="radio" name="main_image" value="<?= h($image) ?>" <?= $firstProjectImage === (string) $image ? 'checked' : '' ?>> Главная</label>
+                        <?php endif; ?>
+                        <?php if (is_uploaded_asset((string) $image)): ?>
+                          <label class="check"><input name="delete_gallery[]" type="checkbox" value="<?= h($image) ?>"> Удалить</label>
+                        <?php endif; ?>
+                      </div>
+                    </div>
                   <?php endforeach; ?>
                 </div>
               <?php else: ?>

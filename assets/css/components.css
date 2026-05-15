@@ -777,7 +777,7 @@
 }
 .project-card.is-open {
   grid-template-columns: minmax(240px, .88fr) minmax(300px, 1.12fr);
-  height: 460px;
+  min-height: 460px;
   border-color: var(--color-line-strong);
   background: color-mix(in oklab, var(--color-bg-elevated) 92%, transparent);
 }
