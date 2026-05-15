@@ -24,14 +24,9 @@
   };
 
   const setMediaRatio = (card, element) => {
+    // CSS handles sizing via fixed heights; clear any dynamic ratio
     const media = card.querySelector('[data-project-media]');
-    if (!media || !element) return;
-
-    const width = element.videoWidth || element.naturalWidth || 16;
-    const height = element.videoHeight || element.naturalHeight || 9;
-    if (width > 0 && height > 0) {
-      media.style.aspectRatio = `${width} / ${height}`;
-    }
+    if (media) media.style.removeProperty('aspect-ratio');
   };
 
   const closeCards = () => {
